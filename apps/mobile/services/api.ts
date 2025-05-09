@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://YOUR_LOCAL_MACHINE_IP:8000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_URL,
 });
 
 export const pingServer = async () => {
