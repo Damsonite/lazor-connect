@@ -1,26 +1,11 @@
-import { Link, Stack } from 'expo-router';
+import { Text } from 'react-native';
 
-import { Button } from '~/components/Button';
 import { Container } from '~/components/Container';
-import { ScreenContent } from '~/components/ScreenContent';
-import { pingServer } from '~/services/api';
 
 export default function Home() {
-  const handlePress = async () => {
-    await pingServer();
-  };
-
   return (
-    <>
-      <Stack.Screen options={{ title: 'Home' }} />
-      <Container>
-        <Button title="Ping" onPress={handlePress} />
-
-        <ScreenContent path="app/index.tsx" title="Home" />
-        <Link href={{ pathname: '/details', params: { name: 'Dan' } }} asChild>
-          <Button title="Show Details" />
-        </Link>
-      </Container>
-    </>
+    <Container>
+      <Text>Hello</Text>
+    </Container>
   );
 }
