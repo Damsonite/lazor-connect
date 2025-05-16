@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput } from 'react-native';
 
-import { createContact } from '../../services/api';
+import SaveBtn from '~/components/contacts/SaveBtn';
+import Container from '~/components/shared/Container';
+import { createContact } from '~/services/contactService';
 
 const ContactCreate: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -53,9 +55,7 @@ const ContactCreate: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create New Contact</Text>
-
+    <Container>
       {error && <Text style={styles.error}>{error}</Text>}
 
       <Text style={styles.label}>First Name *</Text>
@@ -104,23 +104,13 @@ const ContactCreate: React.FC = () => {
       {isLoading ? (
         <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
       ) : (
-        <Button title="Create Contact" onPress={handleSubmit} />
+        <SaveBtn onPress={handleSubmit} />
       )}
-    </View>
+    </Container>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
   label: {
     marginTop: 12,
     marginBottom: 4,
