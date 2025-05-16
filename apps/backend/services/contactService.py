@@ -2,20 +2,10 @@
 Contact service for Lazor Connect API.
 This service handles all business logic related to contacts and manages data storage.
 """
-import os
 from typing import List, Optional, Dict
 
-from models import Contact, ContactList
-
-# Import the Supabase client if available
-try:
-    from db import supabase
-    USE_SUPABASE = bool(os.getenv("USE_SUPABASE", ""))
-except (ImportError, AttributeError):
-    USE_SUPABASE = False
-
-# In-memory database for development
-contacts_db = {}
+from models import Contact
+from db import supabase
 
 
 class ContactService:
@@ -24,67 +14,32 @@ class ContactService:
     @staticmethod
     def get_all_contacts() -> List[Dict]:
         """Get all contacts from the database"""
-        if USE_SUPABASE:
-            # Using Supabase for production
-            response = supabase.table("contacts").select("*").execute()
-            return response.data
-        
-        # Using in-memory database for development
-        return list(contacts_db.values())
+        response = supabase.table("contacts").select("*").execute()
+        return response.data
     
     @staticmethod
     def get_contact(contact_id: str) -> Optional[Dict]:
         """Get a single contact by ID"""
-        if USE_SUPABASE:
-            # Using Supabase for production
-            response = supabase.table("contacts").select("*").eq("id", contact_id).execute()
-            return response.data[0] if response.data else None
-        
-        # Using in-memory database for development
-        return contacts_db.get(contact_id)
+        response = supabase.table("contacts").select("*").eq("id", contact_id).execute()
+        return response.data[0] if response.data else None
     
     @staticmethod
     def create_contact(contact: Dict) -> Dict:
         """Create a new contact in the database"""
-        if USE_SUPABASE:
-            # Using Supabase for production
-            response = supabase.table("contacts").insert(contact).execute()
-            return response.data[0]
-        
-        # Using in-memory database for development
-        contact_id = str(contact.get("id"))
-        contacts_db[contact_id] = contact
-        return contact
+        response = supabase.table("contacts").insert(contact).execute()
+        return response.data[0]
     
     @staticmethod
     def update_contact(contact_id: str, contact_data: Dict) -> Optional[Dict]:
         """Update a contact in the database"""
-        if USE_SUPABASE:
-            # Using Supabase for production
-            response = supabase.table("contacts").update(contact_data).eq("id", contact_id).execute()
-            return response.data[0] if response.data else None
-        
-        # Using in-memory database for development
-        if contact_id not in contacts_db:
-            return None
-        
-        contacts_db[contact_id].update(contact_data)
-        return contacts_db[contact_id]
+        response = supabase.table("contacts").update(contact_data).eq("id", contact_id).execute()
+        return response.data[0] if response.data else None
     
     @staticmethod
     def delete_contact(contact_id: str) -> bool:
         """Delete a contact from the database"""
-        if USE_SUPABASE:
-            # Using Supabase for production
-            response = supabase.table("contacts").delete().eq("id", contact_id).execute()
-            return bool(response.data)
-        
-        # Using in-memory database for development
-        if contact_id not in contacts_db:
-            return False
-        
-        del contacts_db[contact_id]
-        return True
+        response = supabase.table("contacts").delete().eq("id", contact_id).execute()
+        return bool(response.data)
     
     @staticmethod
     def search_contacts(query: str, limit: int = 10) -> List[Contact]:
@@ -123,7 +78,7 @@ class ContactService:
         search: Optional[str] = None,
         favorite: Optional[bool] = None,
         contact_type: Optional[str] = None
-    ) -> ContactList:
+    ) -> List[Contact]:
         """
         List all contacts with optional filtering
         
@@ -156,12 +111,6 @@ class ContactService:
         # Sort by last name, then first name
         filtered_contacts.sort(key=lambda x: (x.last_name.lower(), x.first_name.lower()))
         
-        total = len(filtered_contacts)
         items = filtered_contacts[skip:skip+limit]
         
-        return ContactList(
-            items=items,
-            total=total,
-            page=skip // limit + 1 if limit > 0 else 1,
-            size=limit
-        )
+        return items

@@ -2,11 +2,11 @@
 Contact models for Lazor Connect API.
 """
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from .base import TimestampedModel, PaginatedResponse
+from .base import TimestampedModel
 from .enums import ContactType
 
 
@@ -56,32 +56,6 @@ class ContactBase(BaseModel):
     notes: Optional[str] = None
     favorite: bool = False
     tags: List[str] = []
-    
-    @property
-    def full_name(self) -> str:
-        """Return the contact's full name"""
-        return f"{self.first_name} {self.last_name}"
-    
-    def search_in_fields(self, query: str) -> bool:
-        """Search for a string in all text fields of the contact"""
-        query = query.lower()
-        searchable_fields = [
-            self.first_name.lower(),
-            self.last_name.lower(),
-            self.email.lower() if self.email else "",
-            self.company.lower() if self.company else "",
-            self.job_title.lower() if self.job_title else "",
-            self.notes.lower() if self.notes else ""
-        ]
-        
-        # Add phone numbers
-        for phone in self.phone_numbers:
-            searchable_fields.append(phone.number)
-        
-        # Add tags
-        searchable_fields.extend([tag.lower() for tag in self.tags])
-        
-        return any(query in field for field in searchable_fields)
 
 
 class ContactCreate(ContactBase):
@@ -91,7 +65,7 @@ class ContactCreate(ContactBase):
 
 class Contact(ContactBase, TimestampedModel):
     """Model for contact responses, includes system fields"""
-    id: UUID = Field(default_factory=uuid4)
+    id: UUID
     
     class Config:
         from_attributes = True
@@ -111,9 +85,3 @@ class ContactUpdate(BaseModel):
     notes: Optional[str] = None
     favorite: Optional[bool] = None
     tags: Optional[List[str]] = None
-
-
-# For pagination responses
-class ContactList(PaginatedResponse[Contact]):
-    """Model for paginated contact lists"""
-    pass

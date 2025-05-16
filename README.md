@@ -31,6 +31,7 @@ cd apps/backend
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
+# Make sure to set up your Supabase credentials in .env file (see Environment Variables section)
 uvicorn main:app --reload --host 0.0.0.0
 ```
 
@@ -56,13 +57,32 @@ pnpm web      # run on Web
 EXPO_PUBLIC_API_URL=http://192.168.x.x:8000
 ```
 
+For the backend, copy the example file and update with your credentials:
+
+```bash
+# Copy the example file
+cp apps/backend/.env.example apps/backend/.env
+# Edit with your Supabase credentials
+nano apps/backend/.env
+```
+
+The backend `.env` file should contain:
+
+```bash
+# apps/backend/.env
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_KEY=your_supabase_key_here
+```
+
 Access them in your code:
 
-```
-ts
-CopiarEditar
+```ts
+// Mobile
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+// Backend (Python)
+supabase_url = os.getenv("SUPABASE_URL");
+supabase_key = os.getenv("SUPABASE_KEY");
 ```
 
 ## 🎯 Roadmap

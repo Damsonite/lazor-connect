@@ -9,7 +9,6 @@ from .contact import (
     ContactBase,
     ContactCreate,
     ContactUpdate,
-    ContactList,
     PhoneNumber,
     Address,
     SocialProfile

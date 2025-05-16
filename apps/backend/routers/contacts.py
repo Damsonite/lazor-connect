@@ -1,12 +1,12 @@
 """
 Contact router for Lazor Connect API.
 """
-from fastapi import APIRouter, HTTPException, Query, Path, Depends
+from fastapi import APIRouter, HTTPException, Query, Path
 from typing import List, Optional
 from uuid import UUID
 
-from models import Contact, ContactCreate, ContactUpdate, ContactList
-from services.contact_service import ContactService
+from models import Contact, ContactCreate, ContactUpdate
+from services.contactService import ContactService
 
 router = APIRouter(
     prefix="/contacts",
@@ -18,14 +18,12 @@ router = APIRouter(
 @router.post("", response_model=Contact)
 def create_contact(contact: ContactCreate):
     """Create a new contact"""
-    new_contact = Contact(**contact.model_dump())
-    return ContactService.create_contact(new_contact.model_dump())
+    new_contact = Contact(**contact.model_dump(mode="json"))
+    return ContactService.create_contact(new_contact.model_dump(mode="json"))
 
 
-@router.get("", response_model=ContactList)
+@router.get("", response_model=List[Contact])
 def list_contacts(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
     search: Optional[str] = None,
     favorite: Optional[bool] = None,
     contact_type: Optional[str] = None
@@ -33,15 +31,11 @@ def list_contacts(
     """
     List all contacts with optional filtering
     
-    - **skip**: Number of contacts to skip (pagination)
-    - **limit**: Maximum number of contacts to return
     - **search**: Search string to filter contacts
     - **favorite**: Filter by favorite status
     - **contact_type**: Filter by contact type
     """
     return ContactService.list_contacts(
-        skip=skip,
-        limit=limit,
         search=search,
         favorite=favorite,
         contact_type=contact_type
