@@ -1,9 +1,9 @@
 from typing import Dict, Any
+import random
 
 from .utils import normalize_extracted_data  
 from .contactService import ContactService 
 from .geminiClient import GeminiClient
-
 
 class ChatService:
     def __init__(self, contact_service: ContactService):
@@ -36,18 +36,32 @@ class ChatService:
         """
         Handles an incoming message from a user for a specific contact.
         Provides short, conversational responses to help build the contact profile.
+        Occasionally asks for open-ended feedback and stores the user's reply as feedback.
         """
         contact = self.contact_service.get_contact(contact_id)
         if not contact:
             return {"error": "Contact not found", "status_code": 404}
-        
+
         # Use GeminiClient to handle the conversation
         try:
             bot_response_text = await self.client.handle_conversation(contact, user_message)
+            # Occasionally ask for feedback (e.g., 1 in 5 chance)
+            if random.randint(1, 5) == 1:
+                bot_response_text += "\n\nBy the way, how am I doing? Feel free to share any feedback or suggestions."
         except Exception as e:
             print(f"Error in handle_conversation: {e}")
             bot_response_text = "I'm sorry, I encountered an error processing your message. Please try again later."
-            
+
+        # Detect if the user's message is a feedback reply (open-ended, not like/dislike)
+        feedback_triggers = ["feedback", "suggestion", "improve", "doing", "better", "worse", "bad", "good"]
+        if any(kw in user_message.lower() for kw in feedback_triggers):
+            feedback_store.append({
+                "type": "open_feedback",
+                "message": user_message,
+                "contact_id": contact_id,
+                "timestamp": __import__('datetime').datetime.now().isoformat()
+            })
+
         # Log the interaction instead of storing conversation history
         await self._log_interaction(contact_id, user_message, bot_response_text)
         
@@ -337,3 +351,46 @@ class ChatService:
                 sanitized[field] = [item for item in sanitized[field] if item]
                 
         return sanitized
+    
+    def get_feedback_summary(self, top_n: int = 5) -> dict:
+        """
+        Summarizes feedback trends for model improvement analysis.
+        Returns total count, per-contact count, recent feedback, and common keywords.
+        """
+        from collections import Counter
+        import re
+        
+        # Defensive: feedback_store may be empty
+        if not feedback_store:
+            return {
+                "total_feedback": 0,
+                "feedback_per_contact": {},
+                "recent_feedback": [],
+                "common_words": []
+            }
+        
+        # Total feedback
+        total_feedback = len(feedback_store)
+        
+        # Feedback per contact
+        feedback_per_contact = {}
+        for fb in feedback_store:
+            cid = fb.get("contact_id", "unknown")
+            feedback_per_contact[cid] = feedback_per_contact.get(cid, 0) + 1
+        
+        # Most recent feedback
+        recent_feedback = sorted(feedback_store, key=lambda x: x.get("timestamp", ""), reverse=True)[:top_n]
+        
+        # Common words (very basic, not NLP)
+        all_text = " ".join(fb.get("message", "") for fb in feedback_store)
+        words = re.findall(r"\b\w{4,}\b", all_text.lower())  # 4+ letter words
+        stopwords = set(["this", "that", "with", "have", "from", "your", "just", "like", "about", "would", "could", "should", "doing", "good", "bad", "very", "more", "less", "than", "what", "when", "where", "which", "their", "them", "they", "been", "some", "much", "well", "even", "only", "also", "into", "over", "such", "most", "many", "other", "because", "after", "before", "while", "still", "make", "made", "want", "need", "know", "time", "help", "thanks", "thank"])
+        filtered_words = [w for w in words if w not in stopwords]
+        common_words = Counter(filtered_words).most_common(top_n)
+        
+        return {
+            "total_feedback": total_feedback,
+            "feedback_per_contact": feedback_per_contact,
+            "recent_feedback": recent_feedback,
+            "common_words": common_words
+        }
