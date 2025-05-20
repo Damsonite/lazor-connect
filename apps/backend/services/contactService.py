@@ -65,67 +65,94 @@ class ContactService:
     @staticmethod
     def update_contact(contact_id: str, contact_data: Dict) -> Optional[Dict]:
         """Update a contact in the database"""
-        # We'll work with a fresh payload to avoid modifying any internal state or original data
         try:
-            # First get the current data to perform a patch update
+            # First get the current data to verify contact exists
             current = ContactService.get_contact(contact_id)
             if not current:
                 print(f"Contact {contact_id} not found for update")
                 return None
-                
-            # Use RPC call instead of normal update to bypass trigger issues
-            # This is a more direct way to update the data without dealing with triggers
-            response = supabase.rpc(
-                'update_contact_safe', 
-                {
-                    'p_id': contact_id, 
-                    'p_data': contact_data
-                }
-            ).execute()
             
-            # If RPC isn't available or failed, let's try a direct query approach
-            if not response.data:
-                print("RPC failed, trying direct update...")
-                fields = []
-                values = []
-                
-                for key, value in contact_data.items():
-                    if key not in ['id', 'created_at', 'updated_at']:
-                        fields.append(key)
-                        values.append(value)
-                
-                fields_str = ", ".join([f"{field} = ?" for field in fields])
-                query = f"UPDATE contacts SET {fields_str} WHERE id = ?"
-                
-                # We would execute this query directly with the database
-                # But since we're using Supabase client which doesn't support this,
-                # let's try the normal update but only with specific fields
-                
-                response = supabase.table("contacts").update(contact_data).eq("id", contact_id).execute()
+            # Remove any fields that shouldn't be directly updated
+            clean_data = {k: v for k, v in contact_data.items() 
+                         if k not in ['id', 'created_at', 'updated_at']}
             
-            return response.data[0] if response.data else None
-        except Exception as e:
-            # More detailed error reporting
-            print(f"Supabase update error: {e}")
-            print("Trying one more approach...")
+            # Special handling for interests to ensure it's properly formatted as an array
+            if 'interests' in clean_data:
+                # If it's None, initialize as empty list
+                if clean_data['interests'] is None:
+                    clean_data['interests'] = []
+                # If it's a string (single interest), convert to list
+                elif isinstance(clean_data['interests'], str):
+                    clean_data['interests'] = [clean_data['interests']]
+                # Ensure all items are strings
+                clean_data['interests'] = [str(item) for item in clean_data['interests'] if item]
+                print(f"Formatted interests for update: {clean_data['interests']}")
             
-            # Let's try to update field by field as a last resort
-            try:
-                current = ContactService.get_contact(contact_id)
-                if not current:
-                    return None
+            # Special handling for preferences to ensure proper structure
+            if 'preferences' in clean_data:
+                # Ensure preferences is a dictionary
+                if not isinstance(clean_data['preferences'], dict):
+                    # Try to convert from string if it's a string
+                    if isinstance(clean_data['preferences'], str):
+                        try:
+                            import json
+                            clean_data['preferences'] = json.loads(clean_data['preferences'])
+                        except:
+                            clean_data['preferences'] = {}
+                    else:
+                        clean_data['preferences'] = {}
+                
+                # Ensure likes and dislikes are lists
+                if 'likes' not in clean_data['preferences']:
+                    clean_data['preferences']['likes'] = []
+                if 'dislikes' not in clean_data['preferences']:
+                    clean_data['preferences']['dislikes'] = []
+                
+                print(f"Formatted preferences for update: {clean_data['preferences']}")
+            
+            # Special handling for date fields to ensure proper format
+            import re
+            from datetime import datetime
+            current_year = datetime.now().year
+            
+            # Validate birthday field
+            if 'birthday' in clean_data and clean_data['birthday']:
+                birthday_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', clean_data['birthday'])
+                if birthday_match:
+                    year, month, day = birthday_match.groups()
+                    if year == '0000' or int(year) < 1900 or int(year) > current_year:
+                        # Replace with current year or default to None if date is invalid
+                        try:
+                            clean_data['birthday'] = f"{current_year}-{month}-{day}"
+                            print(f"Fixed invalid birthday year in update: {year} -> {current_year}")
+                        except:
+                            print(f"Invalid birthday format: {clean_data['birthday']} - removing field")
+                            del clean_data['birthday']
+                else:
+                    # If the format doesn't match YYYY-MM-DD, remove it
+                    print(f"Invalid birthday format: {clean_data['birthday']} - removing field")
+                    del clean_data['birthday']
                     
-                for key, value in contact_data.items():
-                    if key not in ['id', 'created_at', 'updated_at']:
-                        # Update one field at a time
-                        update_response = supabase.table("contacts").update({key: value}).eq("id", contact_id).execute()
-                        print(f"Updated field {key}: {update_response.data}")
-                
-                # Get the updated contact
+            # DO NOT add updated_at timestamp - let Supabase handle it through triggers
+            # The error suggests updated_at column is handled by the database
+            
+            # Direct update using the Supabase client
+            print(f"Sending update to Supabase for contact {contact_id} with data: {clean_data}")
+            response = supabase.table("contacts").update(clean_data).eq("id", contact_id).execute()
+            
+            if not response.data:
+                print("Update returned no data")
+                # Get the current state of the contact to return
                 return ContactService.get_contact(contact_id)
-            except Exception as inner_e:
-                print(f"Field-by-field update also failed: {inner_e}")
-                return None
+            
+            print(f"Contact updated successfully with data: {clean_data}")
+            return response.data[0] if response.data else None
+            
+        except Exception as e:
+            print(f"Supabase update error: {e}")
+            print(f"Contact update failed for contact_id: {contact_id}")
+            print(f"Data being updated: {clean_data}")
+            return None
     
     @staticmethod
     def delete_contact(contact_id: str) -> bool:

@@ -108,7 +108,7 @@ def get_contact(contact_id: str = Path(..., title="The ID of the contact to get"
 @router.put("/{contact_id}", response_model=dict)
 def update_contact(
     contact: ContactUpdate,
-    contact_id: int = Path(..., title="The ID of the contact to update")
+    contact_id: str = Path(..., title="The ID of the contact to update")
 ):
     """Update an existing contact"""
     # Update fields, excluding None values
@@ -124,7 +124,7 @@ def update_contact(
 
 
 @router.delete("/{contact_id}", response_model=dict)
-def delete_contact(contact_id: int = Path(..., title="The ID of the contact to delete")):
+def delete_contact(contact_id: str = Path(..., title="The ID of the contact to delete")):
     """Delete a contact"""
     success = ContactService.delete_contact(contact_id)
     

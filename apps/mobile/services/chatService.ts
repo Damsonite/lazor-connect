@@ -1,28 +1,12 @@
 import axios from 'axios';
 
-import { Message } from '~/components/chat/MessageBubble';
-import { Contact } from '~/types/contact';
+import { ChatResponse, GreetingResponse, Message } from '~/types/chat';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
 });
-
-// Define interfaces for API responses
-interface ChatResponse {
-  contact_id: string;
-  user_message: string;
-  bot_response: string;
-  contact_details: Contact;
-  profile_suggestions?: Record<string, any>; // Structured data extracted from the conversation
-}
-
-interface GreetingResponse {
-  contact_id: string;
-  greeting: string;
-  contact_details: Contact;
-}
 
 export const sendChatMessage = async (
   contactId: string,

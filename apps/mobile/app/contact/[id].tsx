@@ -12,11 +12,11 @@ import {
 
 import ChatInput from '~/components/chat/ChatInput';
 import ContactData from '~/components/chat/ContactData';
-import { Message } from '~/components/chat/MessageBubble';
 import MessageList from '~/components/chat/MessageList';
 import TypingIndicator from '~/components/chat/TypingIndicator';
 import { getInitialGreeting, sendChatMessage } from '~/services/chatService';
 import { getContactById } from '~/services/contactService';
+import { Message } from '~/types/chat';
 import { Contact } from '~/types/contact';
 
 const ContactDetails = () => {

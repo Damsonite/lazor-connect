@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
 
+import ContactDetailField from './ContactDetailField';
+
 import { Contact } from '~/types/contact';
 
 export default function ContactData({ contact }: { contact: Contact }) {
@@ -9,41 +11,38 @@ export default function ContactData({ contact }: { contact: Contact }) {
       {contact.nickname && <Text className="mb-2 text-lg italic">"{contact.nickname}"</Text>}
 
       <View className="mt-2 flex-col gap-2">
+        {contact.birthday && (
+          <ContactDetailField label="Birthday">
+            {new Date(contact.birthday).toLocaleDateString()}
+          </ContactDetailField>
+        )}
+
         {contact.relationship_type && (
-          <View className="mb-1 flex-row">
-            <Text className="mr-1 text-gray-500">Relationship:</Text>
-            <Text className="text-md text-slate-800">{contact.relationship_type}</Text>
-          </View>
+          <ContactDetailField label="Relationship">{contact.relationship_type}</ContactDetailField>
         )}
 
         {contact.relationship_strength && (
-          <View className="mb-1 flex-row">
-            <Text className="mr-1 text-gray-500">Connection strength:</Text>
-            <Text className="text-md text-slate-800">{contact.relationship_strength}/5</Text>
-          </View>
+          <ContactDetailField label="Connection strength">
+            {contact.relationship_strength}/5
+          </ContactDetailField>
         )}
 
         {contact.interests && contact.interests.length > 0 && (
-          <View className="mb-1 flex-col">
-            <Text className="text-gray-500">Interests:</Text>
+          <ContactDetailField label="Interests" inline={false}>
             <Text className="text-md text-slate-800">{contact.interests.join(', ')}</Text>
-          </View>
+          </ContactDetailField>
         )}
 
         {contact.conversation_topics && contact.conversation_topics.length > 0 && (
-          <View className="mb-1 flex-col">
-            <Text className="text-gray-500">Previous conversation topics:</Text>
+          <ContactDetailField label="Previous conversation topics" inline={false}>
             <Text className="text-md text-slate-800">{contact.conversation_topics.join(', ')}</Text>
-          </View>
+          </ContactDetailField>
         )}
 
         {contact.last_connection && (
-          <View className="mb-1 flex-row">
-            <Text className="mr-1 text-gray-500">Last contact:</Text>
-            <Text className="text-md text-slate-800">
-              {new Date(contact.last_connection).toLocaleDateString()}
-            </Text>
-          </View>
+          <ContactDetailField label="Last contact">
+            {new Date(contact.last_connection).toLocaleDateString()}
+          </ContactDetailField>
         )}
       </View>
     </View>

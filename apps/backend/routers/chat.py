@@ -5,8 +5,8 @@ maintaining conversational history.
 """
 from fastapi import APIRouter, HTTPException, Path
 from typing import Dict, Any
-from pydantic import BaseModel
 
+from models import ChatRequest
 from services.chatService import ChatService
 from services.contactService import ContactService
 
@@ -16,17 +16,8 @@ router = APIRouter(
     responses={404: {"description": "Contact not found"}},
 )
 
-# Initialize services
 contact_service = ContactService()
 chat_service = ChatService(contact_service)
-
-
-class ChatRequest(BaseModel):
-    message: str
-
-
-class ProfileUpdateRequest(BaseModel):
-    fields: Dict[str, Any]
 
 
 @router.post("/{contact_id}/send", response_model=Dict[str, Any])

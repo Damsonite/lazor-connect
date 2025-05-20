@@ -63,13 +63,8 @@ const getContacts = async (): Promise<Contact[]> => {
   try {
     const response = await api.get('/contacts');
 
-    // Transform the response data
-    return response
-      ? response.data.map((contact: Contact) => ({
-          id: contact.id,
-          name: contact.name,
-        }))
-      : [];
+    // Return the complete contact objects directly
+    return response ? response.data : [];
   } catch (error) {
     console.error('Error fetching contacts:', error);
     return [];
@@ -102,10 +97,8 @@ const getContactById = async (id: Contact['id']): Promise<Contact> => {
     const response = await api.get<Contact>(`/contacts/${id}`);
     console.log(`Contact with id ${id} fetched:`, response.data);
 
-    return {
-      id: response.data.id,
-      name: response.data.name,
-    };
+    // Return the complete contact object directly
+    return response.data;
   } catch (error) {
     console.error(`Error fetching contact with id ${id}:`, error);
     throw error;

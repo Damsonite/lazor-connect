@@ -1,7 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { RefObject } from 'react';
 
-import MessageBubble, { Message } from '~/components/chat/MessageBubble';
+import MessageBubble from '~/components/chat/MessageBubble';
+import { Message } from '~/types/chat';
 
 interface MessageListProps {
   messages: Message[];

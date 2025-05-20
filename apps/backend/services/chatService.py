@@ -49,12 +49,18 @@ class ChatService:
             "Extract structured contact information from this message. "
             "ONLY return data that's clearly mentioned in this exact message (not previous context).\n"
             "Return a JSON object with ONLY the following properties where info is clearly present:\n"
-            "- birthday: Extract birthday in ISO format (YYYY-MM-DD) if mentioned\n"
-            "- interests: Array of interests or hobbies mentioned\n"
+            "- birthday: Extract birthday in ISO format (YYYY-MM-DD) if mentioned. Use current year if no year specified.\n"
+            "- interests: Array of interests or hobbies mentioned, including things they like (e.g., if message says 'likes apples', add 'apples' to interests)\n"
             "- important_dates: Array of objects with {date: 'YYYY-MM-DD', description: 'string'}\n"
             "- relationship_type: String (friend, family, colleague, etc)\n"
             "- preferences: {likes: [array of things they like], dislikes: [array of things they dislike]}\n"
             "- family_details: String with family information\n\n"
+            "IMPORTANT EXTRACTION RULES:\n"
+            "1. If a message mentions liking something (e.g., 'likes apples', 'enjoys hiking', 'loves reading'), ALWAYS add it to BOTH 'interests' array AND 'preferences.likes' array.\n"
+            "2. Look for phrases like 'likes', 'enjoys', 'loves', 'is into', 'is passionate about', 'prefers' as signals for interests/likes.\n"
+            "3. Extract specific items (e.g., 'apples' from 'likes apples') rather than entire phrases.\n"
+            "4. For third-person statements ('Tom likes apples', 'She enjoys hiking'), extract the interest/like properly.\n"
+            "5. For dates without a year (e.g., 'May 5'), always use the current year instead of '0000'.\n\n"
             "Format as valid JSON only. No explanations or other text. Return empty object if no relevant information.\n\n"
             f"Message: '{message}'"
         )
@@ -66,7 +72,7 @@ class ChatService:
                 contents=[extraction_prompt]
             )
             
-            # Try to parse the response as JSON
+            # Try to parse the response as JSON            
             extracted_text = response.text.strip()
             
             # Sometimes the model returns markdown code blocks, so strip those if present
@@ -83,6 +89,51 @@ class ChatService:
             import json
             extracted_data = json.loads(extracted_text)
             
+            # Validate and fix date fields
+            import re
+            from datetime import datetime
+            current_year = datetime.now().year
+            
+            # Fix birthday if present but invalid
+            if 'birthday' in extracted_data and extracted_data['birthday']:
+                # Check if the year is 0000 or invalid
+                birthday_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', extracted_data['birthday'])
+                if birthday_match:
+                    year, month, day = birthday_match.groups()
+                    if year == '0000' or int(year) < 1900 or int(year) > current_year:
+                        # Replace with a reasonable year (current year)
+                        extracted_data['birthday'] = f"{current_year}-{month}-{day}"
+                        print(f"Fixed invalid birthday year: {year} -> {current_year}")
+            
+            # Make sure preferences structure is properly set up
+            if 'preferences' not in extracted_data:
+                extracted_data['preferences'] = {}
+            if 'likes' not in extracted_data['preferences']:
+                extracted_data['preferences']['likes'] = []
+            if 'dislikes' not in extracted_data['preferences']:
+                extracted_data['preferences']['dislikes'] = []
+                
+            # Ensure interests are also added to preferences.likes and vice versa
+            if 'interests' in extracted_data and extracted_data['interests']:
+                if not extracted_data['preferences']['likes']:
+                    extracted_data['preferences']['likes'] = extracted_data['interests'].copy()
+                else:
+                    # Add any interests that aren't already in likes
+                    for interest in extracted_data['interests']:
+                        if interest not in extracted_data['preferences']['likes']:
+                            extracted_data['preferences']['likes'].append(interest)
+            
+            # Also ensure preferences.likes are in interests
+            if extracted_data['preferences']['likes']:
+                if 'interests' not in extracted_data or not extracted_data['interests']:
+                    extracted_data['interests'] = extracted_data['preferences']['likes'].copy()
+                else:
+                    # Add any likes that aren't already in interests
+                    for like in extracted_data['preferences']['likes']:
+                        if like not in extracted_data['interests']:
+                            extracted_data['interests'].append(like)
+            
+            print(f"Extracted and normalized data from message: {extracted_data}")
             # If contact_id is provided, update the contact with this data
             if contact_id and extracted_data and self.contact_service:
                 await self._update_contact_with_extracted_data(contact_id, extracted_data)
@@ -320,6 +371,17 @@ class ChatService:
             update_payload['interests'] = merged_interests
             print(f"Updating interests to {merged_interests}")
             
+        # Also check if we have preferences.likes that should be added to interests
+        if 'preferences' in extracted_data and extracted_data['preferences']:
+            if 'likes' in extracted_data['preferences'] and extracted_data['preferences']['likes']:
+                # Add likes to interests as well for consistency
+                likes_to_add = extracted_data['preferences']['likes']
+                current_interests = update_payload.get('interests', contact.get('interests', []) or [])
+                # Convert to set to remove duplicates and back to list
+                merged_interests = list(set(current_interests + likes_to_add))
+                update_payload['interests'] = merged_interests
+                print(f"Added preferences.likes to interests: {merged_interests}")
+            
         # Process important dates - add new ones
         if 'important_dates' in extracted_data and extracted_data['important_dates']:
             current_dates = contact.get('important_dates', []) or []
@@ -380,11 +442,23 @@ class ChatService:
                 update_payload['family_details'] = json.dumps(update_payload['family_details'])
             
             print(f"Updating contact {contact_id} with new data: {update_payload}")
+            print(f"Original extracted data was: {extracted_data}")
+            
+            # Extra debug for interests and preferences
+            if 'interests' in update_payload:
+                print(f"INTERESTS UPDATE: {update_payload['interests']}")
+            if 'preferences' in update_payload:
+                print(f"PREFERENCES UPDATE: {update_payload['preferences']}")
+                
             try:
                 # Try the update with our improved ContactService that handles errors better
                 result = self.contact_service.update_contact(contact_id, update_payload)
                 if result:
                     print(f"Successfully updated contact {contact_id}")
+                    # Show updated contact data
+                    updated_contact = self.contact_service.get_contact(contact_id)
+                    print(f"Updated contact interests: {updated_contact.get('interests')}")
+                    print(f"Updated contact preferences: {updated_contact.get('preferences')}")
                 else:
                     print(f"Contact update returned no result. It may not have been updated.")
             except Exception as e:
