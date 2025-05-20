@@ -69,7 +69,7 @@ class ContactCreate(ContactBase):
 
 class Contact(ContactBase, TimestampedModel):
     """Model for contact responses, includes system fields"""
-    id: int
+    id: UUID
     
     class Config:
         from_attributes = True

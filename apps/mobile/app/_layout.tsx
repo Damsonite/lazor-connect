@@ -7,6 +7,7 @@ export default function Layout() {
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Lazor Connect' }} />
       <Stack.Screen name="contact/create" options={{ title: 'Create contact' }} />
+      <Stack.Screen name="contact/[id]" options={{ title: 'Chat Assistant' }} />
     </Stack>
   );
 }

@@ -36,8 +36,8 @@ class ContactService:
         return response.data
     
     @staticmethod
-    def get_contact(contact_id: int) -> Optional[Dict]:
-        """Get a single contact by ID"""
+    def get_contact(contact_id: str) -> Optional[Dict]:
+        """Get a single contact by ID (UUID string)"""
         response = supabase.table("contacts").select("*").eq("id", contact_id).execute()
         return response.data[0] if response.data else None
     

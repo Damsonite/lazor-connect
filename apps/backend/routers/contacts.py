@@ -95,8 +95,8 @@ def get_by_relationship(
 
 
 @router.get("/{contact_id}", response_model=dict)
-def get_contact(contact_id: int = Path(..., title="The ID of the contact to get")):
-    """Get a specific contact by ID"""
+def get_contact(contact_id: str = Path(..., title="The ID of the contact to get")):
+    """Get a specific contact by ID (UUID string)"""
     contact = ContactService.get_contact(contact_id)
     
     if contact is None:

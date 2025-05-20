@@ -28,7 +28,7 @@ interface ContactBase {
 }
 
 interface Contact extends ContactBase {
-  id: number;
+  id: string; // Changed from number to string for UUID compatibility
 }
 
 interface ContactCreate extends ContactBase {}

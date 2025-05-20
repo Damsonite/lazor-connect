@@ -86,7 +86,7 @@ const deleteContact = async (id: Contact['id']) => {
   }
 };
 
-const updateContact = async (id: number, contact: Partial<ContactCreate>) => {
+const updateContact = async (id: Contact['id'], contact: Partial<ContactCreate>) => {
   try {
     const payload = { ...contact };
     const response = await api.put(`/contacts/${id}`, payload);
