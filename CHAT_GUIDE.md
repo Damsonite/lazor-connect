@@ -29,7 +29,7 @@ The AI generates personalized conversation starters based on:
 
 Example:
 
-```
+```text
 "I remember you enjoy landscape photography. What draws you to capturing nature's beauty? I'd love to hear about your favorite shot and the story behind it."
 ```
 
