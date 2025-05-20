@@ -2,60 +2,64 @@
 Contact models for Lazor Connect API.
 """
 
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional
+from datetime import date, datetime
+from pydantic import BaseModel
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from .base import TimestampedModel
-from .enums import ContactType
+from .enums import ContactType, RelationshipType
 
 
-class Address(BaseModel):
-    """Model for address information"""
-    street: str
-    city: str
-    state: Optional[str] = None
-    postal_code: str
-    country: str
-    
-    def formatted_address(self) -> str:
-        """Return a formatted address string"""
-        address_parts = [self.street, self.city]
-        if self.state:
-            address_parts.append(self.state)
-        address_parts.append(self.postal_code)
-        address_parts.append(self.country)
-        return ", ".join(address_parts)
+class ContactMethod(BaseModel):
+    """Model for contact methods"""
+    type: str  # e.g., 'presential', 'phone', 'social_media'
+    value: str  # e.g., 'cinema', '123-456-7890', '@username'
+    preferred: Optional[bool] = None
 
 
-class PhoneNumber(BaseModel):
-    """Model for phone numbers"""
-    number: str
-    type: str = "mobile"  # mobile, home, work, etc.
-    is_primary: bool = False
+class ImportantDate(BaseModel):
+    """Model for important dates"""
+    date: date
+    description: str
 
 
-class SocialProfile(BaseModel):
-    """Model for social media profiles"""
-    platform: str  # LinkedIn, Twitter, Instagram, etc.
-    username: str
-    url: Optional[str] = None
+class Reminder(BaseModel):
+    """Model for reminders"""
+    text: str
+    due_date: Optional[date] = None
+
+
+class Preferences(BaseModel):
+    """Model for preferences"""
+    likes: Optional[List[str]] = None
+    dislikes: Optional[List[str]] = None
 
 
 class ContactBase(BaseModel):
     """Base model for contact information"""
-    first_name: str
-    last_name: str
-    email: Optional[EmailStr] = None
-    phone_numbers: Optional[List[PhoneNumber]] = []
-    addresses: Optional[List[Address]] = []
-    social_profiles: Optional[List[SocialProfile]] = []
-    company: Optional[str] = None
-    job_title: Optional[str] = None
-    contact_type: ContactType = ContactType.OTHER
-    notes: Optional[str] = None
-    favorite: bool = False
-    tags: List[str] = []
+    # Basic contact information
+    name: str
+    nickname: Optional[str] = None
+    birthday: Optional[str] = None  # ISO format string for compatibility
+    contact_methods: Optional[List[ContactMethod]] = None
+    
+    # Relationship management fields
+    last_connection: Optional[datetime] = None
+    avg_days_btw_contacts: Optional[float] = None
+    recommended_contact_freq_days: Optional[int] = None
+    relationship_type: Optional[str] = None  # e.g., 'friend', 'family', 'colleague'
+    relationship_strength: Optional[int] = None  # 1-5
+    
+    # Contextual information
+    conversation_topics: Optional[List[str]] = None
+    important_dates: Optional[List[ImportantDate]] = None
+    reminders: Optional[List[Reminder]] = None
+    
+    # Personal details
+    interests: Optional[List[str]] = None
+    family_details: Optional[str] = None
+    preferences: Optional[Preferences] = None
 
 
 class ContactCreate(ContactBase):
@@ -65,7 +69,7 @@ class ContactCreate(ContactBase):
 
 class Contact(ContactBase, TimestampedModel):
     """Model for contact responses, includes system fields"""
-    id: UUID
+    id: int
     
     class Config:
         from_attributes = True
@@ -73,15 +77,21 @@ class Contact(ContactBase, TimestampedModel):
 
 class ContactUpdate(BaseModel):
     """Model for updating an existing contact (all fields optional)"""
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    phone_numbers: Optional[List[PhoneNumber]] = None
-    addresses: Optional[List[Address]] = None
-    social_profiles: Optional[List[SocialProfile]] = None
-    company: Optional[str] = None
-    job_title: Optional[str] = None
-    contact_type: Optional[ContactType] = None
-    notes: Optional[str] = None
-    favorite: Optional[bool] = None
-    tags: Optional[List[str]] = None
+    name: Optional[str] = None
+    nickname: Optional[str] = None
+    birthday: Optional[str] = None
+    contact_methods: Optional[List[ContactMethod]] = None
+    
+    last_connection: Optional[datetime] = None
+    avg_days_btw_contacts: Optional[float] = None
+    recommended_contact_freq_days: Optional[int] = None
+    relationship_type: Optional[str] = None
+    relationship_strength: Optional[int] = None
+    
+    conversation_topics: Optional[List[str]] = None
+    important_dates: Optional[List[ImportantDate]] = None
+    reminders: Optional[List[Reminder]] = None
+    
+    interests: Optional[List[str]] = None
+    family_details: Optional[str] = None
+    preferences: Optional[Preferences] = None

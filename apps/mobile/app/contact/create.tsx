@@ -1,23 +1,24 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput } from 'react-native';
 
 import SaveBtn from '~/components/contacts/SaveBtn';
 import Container from '~/components/shared/Container';
+import FormField from '~/components/shared/FormField';
+import Loading from '~/components/shared/Loading';
 import { createContact } from '~/services/contactService';
 
 const ContactCreate: React.FC = () => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
+  const [name, setName] = useState('');
+  const [isNameValid, setIsNameValid] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shouldValidate, setShouldValidate] = useState(false);
 
   const handleSubmit = async () => {
-    if (!firstName || !lastName) {
-      Alert.alert('Error', 'First and last name are required');
+    setShouldValidate(true);
+
+    // Check if required field is filled
+    if (!name || !isNameValid) {
       return;
     }
 
@@ -25,30 +26,18 @@ const ContactCreate: React.FC = () => {
     setError(null);
 
     try {
-      await createContact({
-        first_name: firstName,
-        last_name: lastName,
-        email: email || undefined,
-        phone_numbers: phone ? [phone] : [],
-        company: company || undefined,
-        tags: [],
-      });
+      await createContact({ name });
 
-      Alert.alert('Success', 'Contact created successfully');
-
-      // Reset form
-      setFirstName('');
-      setLastName('');
-      setPhone('');
-      setEmail('');
-      setCompany('');
+      // Reset form and validation state
+      setName('');
+      setShouldValidate(false);
 
       // Navigate back to contact list
       router.back();
     } catch (err) {
       console.error('Failed to create contact:', err);
       setError('Failed to create contact. Please try again.');
-      Alert.alert('Error', 'Failed to create contact. Please try again.');
+      setShouldValidate(false);
     } finally {
       setIsLoading(false);
     }
@@ -56,82 +45,21 @@ const ContactCreate: React.FC = () => {
 
   return (
     <Container>
-      {error && <Text style={styles.error}>{error}</Text>}
-
-      <Text style={styles.label}>First Name *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter first name"
-        value={firstName}
-        onChangeText={setFirstName}
+      <FormField
+        label="Name"
+        required
+        value={name}
+        onChangeText={setName}
+        placeholder="Enter name"
+        onValidationChange={setIsNameValid}
+        validateOnSubmit={shouldValidate}
       />
 
-      <Text style={styles.label}>Last Name *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter last name"
-        value={lastName}
-        onChangeText={setLastName}
-      />
+      <Loading loading={isLoading} error={error} />
 
-      <Text style={styles.label}>Phone</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter phone number"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-      />
-
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Company</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter company"
-        value={company}
-        onChangeText={setCompany}
-      />
-
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
-      ) : (
-        <SaveBtn onPress={handleSubmit} />
-      )}
+      {!isLoading && <SaveBtn onPress={handleSubmit} />}
     </Container>
   );
 };
-
-const styles = StyleSheet.create({
-  label: {
-    marginTop: 12,
-    marginBottom: 4,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  error: {
-    color: 'red',
-    marginBottom: 10,
-  },
-  loader: {
-    marginTop: 20,
-  },
-});
 
 export default ContactCreate;

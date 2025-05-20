@@ -5,6 +5,7 @@
 ## 🚀 Features
 
 - **Contact Management**: Create, edit, and delete meaningful contacts.
+- **Relationship Management**: Track interactions, conversation topics, and connection strength.
 - **Authentication**: Integrated Supabase login.
 - **API Communication**: Secure interaction between mobile and backend.
 - **Scalable Architecture**: Monorepo with clear separation of concerns.
@@ -14,6 +15,46 @@
 - **Backend**: FastAPI, Pydantic, Uvicorn
 - **Mobile**: React Native (Expo), Zustand, Expo Router, NativeWind (TailwindCSS)
 - **Database & Auth**: Supabase
+
+## 📋 Contact Model
+
+The application uses a rich contact model focused on relationship management:
+
+### Basic Information
+
+- **name**: Full contact name
+- **nickname**: Optional familiar name
+- **birthday**: Birth date in ISO format
+- **contact_methods**: Various ways to contact (phone, email, social media, etc.)
+
+### Relationship Management
+
+- **last_connection**: When you last interacted with this person
+- **avg_days_btw_contacts**: Average days between interactions
+- **recommended_contact_freq_days**: How often you should connect
+- **relationship_type**: Friend, family, colleague, etc.
+- **relationship_strength**: Connection strength (1-5 scale)
+
+### Contextual Information
+
+- **conversation_topics**: What you usually talk about
+- **important_dates**: Significant dates to remember
+- **reminders**: Follow-up items for this contact
+
+### Personal Details
+
+- **interests**: What the person likes to do
+- **family_details**: Information about family members
+- **preferences**: Person's likes and dislikes
+
+## 🗄️ Database Structure
+
+The Supabase database schema includes:
+
+- **contacts**: Core contact information and relationship data
+- **contact_methods**: Different ways to contact a person (phone, email, social, etc.)
+- **important_dates**: Significant dates related to contacts
+- **reminders**: Follow-up items for contacts
 
 ## ⚡Installation & Usage
 
@@ -37,7 +78,7 @@ uvicorn main:app --reload --host 0.0.0.0
 
 API available at [http://localhost:8000](http://localhost:8000/)
 
-Docs at http://localhost:8000/docs
+Docs at [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ### 📱 Mobile App
 

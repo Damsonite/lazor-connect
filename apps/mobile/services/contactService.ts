@@ -8,48 +8,51 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
-const pingServer = async () => {
+const createContact = async (contact: ContactCreate) => {
   try {
-    const res = await api.get('/ping');
-    console.log('Server response:', res.data);
-    return res.data;
-  } catch (error) {
-    console.error('Error pinging server:', error);
-    throw error;
-  }
-};
-
-const createContact = async (contact: ContactCreate): Promise<Contact> => {
-  try {
+    // Create payload with all fields from the contact
     const payload: ContactCreate = {
-      first_name: contact.first_name,
-      last_name: contact.last_name,
-      email: contact.email,
-      phone_numbers: contact.phone_numbers || [],
-      company: contact.company,
-      job_title: contact.job_title,
-      notes: contact.notes,
-      favorite: contact.favorite || false,
-      tags: contact.tags || [],
+      name: contact.name,
+      // Include all optional fields that exist in the contact object
+      ...(contact.nickname && { nickname: contact.nickname }),
+      ...(contact.birthday && { birthday: contact.birthday }),
+      ...(contact.contact_methods && { contact_methods: contact.contact_methods }),
+      ...(contact.relationship_type && { relationship_type: contact.relationship_type }),
+      ...(contact.relationship_strength && {
+        relationship_strength: contact.relationship_strength,
+      }),
+      ...(contact.conversation_topics && {
+        conversation_topics: contact.conversation_topics,
+      }),
+      ...(contact.important_dates && {
+        important_dates: contact.important_dates,
+      }),
+      ...(contact.reminders && {
+        reminders: contact.reminders,
+      }),
+      ...(contact.interests && {
+        interests: contact.interests,
+      }),
+      ...(contact.family_details && {
+        family_details: contact.family_details,
+      }),
+      ...(contact.preferences && {
+        preferences: contact.preferences,
+      }),
+      ...(contact.last_connection && {
+        last_connection: contact.last_connection,
+      }),
+      ...(contact.avg_days_btw_contacts && {
+        avg_days_btw_contacts: contact.avg_days_btw_contacts,
+      }),
+      ...(contact.recommended_contact_freq_days && {
+        recommended_contact_freq_days: contact.recommended_contact_freq_days,
+      }),
     };
 
     const response = await api.post('/contacts', payload);
     console.log('Contact created:', response.data);
-
-    // Return the created contact (transformed from snake_case to camelCase)
-    return {
-      id: response.data.id,
-      first_name: response.data.first_name,
-      last_name: response.data.last_name,
-      email: response.data.email,
-      phone_numbers: response.data.phone_numbers?.map((p: any) => p.number) || [],
-      company: response.data.company,
-      job_title: response.data.job_title,
-      contact_type: response.data.contact_type,
-      notes: response.data.notes,
-      favorite: response.data.favorite,
-      tags: response.data.tags,
-    };
+    return response.data;
   } catch (error) {
     console.error('Error creating contact:', error);
     throw error;
@@ -59,29 +62,21 @@ const createContact = async (contact: ContactCreate): Promise<Contact> => {
 const getContacts = async (): Promise<Contact[]> => {
   try {
     const response = await api.get('/contacts');
-    console.log('Contacts fetched:', response.data);
 
     // Transform the response data
-    return response.data.map((contact: any) => ({
-      id: contact.id,
-      first_name: contact.first_name,
-      last_name: contact.last_name,
-      email: contact.email,
-      phone_numbers: contact.phone_numbers?.map((p: any) => p.number) || [],
-      company: contact.company,
-      job_title: contact.job_title,
-      contact_type: contact.contact_type,
-      notes: contact.notes,
-      favorite: contact.favorite,
-      tags: contact.tags || [],
-    }));
+    return response
+      ? response.data.map((contact: Contact) => ({
+          id: contact.id,
+          name: contact.name,
+        }))
+      : [];
   } catch (error) {
     console.error('Error fetching contacts:', error);
     return [];
   }
 };
 
-const deleteContact = async (id: number): Promise<void> => {
+const deleteContact = async (id: Contact['id']) => {
   try {
     await api.delete(`/contacts/${id}`);
     console.log(`Contact with id ${id} deleted successfully`);
@@ -91,50 +86,25 @@ const deleteContact = async (id: number): Promise<void> => {
   }
 };
 
-const updateContact = async (id: number, contact: Partial<ContactCreate>): Promise<Contact> => {
+const updateContact = async (id: number, contact: Partial<ContactCreate>) => {
   try {
     const payload = { ...contact };
     const response = await api.put(`/contacts/${id}`, payload);
     console.log('Contact updated:', response.data);
-
-    // Return the updated contact
-    return {
-      id: response.data.id,
-      first_name: response.data.first_name,
-      last_name: response.data.last_name,
-      email: response.data.email,
-      phone_numbers: response.data.phone_numbers?.map((p: any) => p.number) || [],
-      company: response.data.company,
-      job_title: response.data.job_title,
-      contact_type: response.data.contact_type,
-      notes: response.data.notes,
-      favorite: response.data.favorite,
-      tags: response.data.tags || [],
-    };
   } catch (error) {
     console.error(`Error updating contact with id ${id}:`, error);
     throw error;
   }
 };
 
-const getContactById = async (id: number): Promise<Contact> => {
+const getContactById = async (id: Contact['id']): Promise<Contact> => {
   try {
-    const response = await api.get(`/contacts/${id}`);
+    const response = await api.get<Contact>(`/contacts/${id}`);
     console.log(`Contact with id ${id} fetched:`, response.data);
 
-    // Transform the response data
     return {
       id: response.data.id,
-      first_name: response.data.first_name,
-      last_name: response.data.last_name,
-      email: response.data.email,
-      phone_numbers: response.data.phone_numbers?.map((p: any) => p.number) || [],
-      company: response.data.company,
-      job_title: response.data.job_title,
-      contact_type: response.data.contact_type,
-      notes: response.data.notes,
-      favorite: response.data.favorite,
-      tags: response.data.tags || [],
+      name: response.data.name,
     };
   } catch (error) {
     console.error(`Error fetching contact with id ${id}:`, error);
@@ -142,4 +112,4 @@ const getContactById = async (id: number): Promise<Contact> => {
   }
 };
 
-export { createContact, deleteContact, getContactById, getContacts, pingServer, updateContact };
+export { createContact, deleteContact, getContactById, getContacts, updateContact };

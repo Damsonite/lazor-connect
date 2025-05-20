@@ -9,10 +9,11 @@ from .contact import (
     ContactBase,
     ContactCreate,
     ContactUpdate,
-    PhoneNumber,
-    Address,
-    SocialProfile
+    ContactMethod,
+    ImportantDate,
+    Reminder,
+    Preferences
 )
 
 # Enum types
-from .enums import ContactType
+from .enums import ContactType, RelationshipType
