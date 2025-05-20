@@ -5,6 +5,7 @@ ONLY return data that's clearly mentioned in this exact message (not previous co
 
 Return a JSON object with ONLY the following properties where info is clearly present:
 
+- nickname: Extract nickname if mentioned (e.g., "Tom's nickname is Racoon", "they call him Ace")
 - birthday: Extract birthday in ISO format (YYYY-MM-DD) if mentioned. Use current year if no year specified.
 - interests: Array of interests or hobbies mentioned, including things they like (e.g., if message says 'likes apples', add 'apples' to interests)
 - important_dates: Array of objects with {date: 'YYYY-MM-DD', description: 'string'}

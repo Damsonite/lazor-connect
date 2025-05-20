@@ -1,7 +1,6 @@
 """
 Utilities for loading prompt templates from markdown files.
 """
-import os
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -9,19 +8,9 @@ from typing import Dict, Optional
 class PromptLoader:
     """Utility for loading prompt templates from markdown files."""
     
-    def __init__(self, prompts_dir: str = None):
-        """
-        Initialize the prompt loader.
-        
-        Args:
-            prompts_dir: Optional path to the prompts directory.
-                         If not provided, uses the default prompts directory.
-        """
-        if prompts_dir:
-            self.prompts_dir = Path(prompts_dir)
-        else:
-            # Default to prompts directory next to this file
-            self.prompts_dir = Path(__file__).parent.parent / "prompts"
+    def __init__(self):
+        # Default to prompts directory next to this file
+        self.prompts_dir = Path(__file__).parent.parent / "prompts"
         
         # Cache for loaded prompts
         self._cache: Dict[str, str] = {}
@@ -55,23 +44,5 @@ class PromptLoader:
         except Exception as e:
             print(f"Error loading prompt '{name}': {e}")
             return None
-    
-    def get_prompts_list(self) -> list:
-        """
-        Get a list of available prompt templates.
-        
-        Returns:
-            List of prompt template names (without .md extension)
-        """
-        if not self.prompts_dir.exists():
-            return []
-        
-        return [
-            file.stem 
-            for file in self.prompts_dir.glob("*.md") 
-            if file.is_file()
-        ]
 
-
-# Create a singleton instance for convenience
 prompt_loader = PromptLoader()

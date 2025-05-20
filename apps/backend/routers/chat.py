@@ -19,7 +19,6 @@ router = APIRouter(
 contact_service = ContactService()
 chat_service = ChatService(contact_service)
 
-
 @router.post("/{contact_id}/send", response_model=Dict[str, Any])
 async def send_message(
     contact_id: str = Path(..., title="The ID of the contact to chat with"), 

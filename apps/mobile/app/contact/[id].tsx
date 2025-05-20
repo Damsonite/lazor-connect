@@ -110,10 +110,9 @@ const ContactDetails = () => {
       // If there are profile suggestions, we could update the contact profile here
       if (response.profile_suggestions && Object.keys(response.profile_suggestions).length > 0) {
         console.log('Got profile suggestions:', response.profile_suggestions);
-        // In a real app, you might:
-        // 1. Ask the user if they want to update the profile with this information
-        // 2. Automatically update certain fields
-        // 3. Show a UI element with the suggested changes
+        // Refetch contact data to update header immediately
+        const updatedContact = await getContactById(id as string);
+        setContact(updatedContact);
       }
 
       // Add AI response to the list

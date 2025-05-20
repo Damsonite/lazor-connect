@@ -9,3 +9,4 @@
 7. Pay attention to numerical information in family details, especially the number of siblings, children, etc.
 8. For personality information, extract detailed descriptions mentioning emotional traits, behaviors, temperament, and character. Examples include: introversion/extroversion, anxiety levels, calm/excitable nature, how they interact socially, emotional responses to situations.
 9. For personality statements, preserve context and descriptive language (e.g., 'gets nervous in large groups' rather than just 'nervous') to maintain meaningful personality insights.
+10. Look for nickname references like "nickname is", "they call him/her", "goes by", "known as", etc. Extract only the actual nickname, not the whole phrase.

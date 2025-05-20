@@ -1,218 +1,36 @@
-import os
-from typing import Dict, Any, List
-from google import genai
+from typing import Dict, Any
 
+from .utils import normalize_extracted_data  
 from .contactService import ContactService 
-from .promptService import prompt_loader
+from .geminiClient import GeminiClient
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY environment variable not set. ChatService may not function correctly.")
-    client = None
-else:
-    client = genai.Client(api_key=GEMINI_API_KEY)
 
 class ChatService:
     def __init__(self, contact_service: ContactService):
         self.contact_service = contact_service
-        self.client = client
-        pass
+        self.client = GeminiClient()
     
     async def _log_interaction(self, contact_id: str, user_message: str, bot_response: str):
         """
         Logs an interaction without storing full conversation history.
         This could be used for analytics or to update the 'last_connection' field.
         """
-        print(f"Logging interaction for contact_id: {contact_id}")
-        print(f"User message topic: {user_message[:30]}...")
-        print(f"Bot response type: {bot_response[:30]}...")
-        
-        # In a real implementation, you might:
-        # 1. Update the contact's last_connection timestamp
-        # 2. Extract and store topics from the conversation
-        # 3. Update interaction frequency stats
-        pass
-    
-    async def _extract_profile_data(self, message: str, contact_id: str = None) -> Dict[str, Any]:
-        """
-        Analyzes a message to extract structured data that could update a profile.
-        For example, detecting interests, important dates, or preferences.
-        
-        Uses the Gemini API to extract structured data from free text.
-        If contact_id is provided, will update the contact with the extracted data.
-        """
-        if not self.client or not message:
-            return {}
-        
-        # Load prompt templates from markdown files
-        profile_extraction_template = prompt_loader.load_prompt("profile_extraction")
-        extraction_rules_template = prompt_loader.load_prompt("extraction_rules")
-        json_format_template = prompt_loader.load_prompt("json_format_instructions")
-        
-        # Check if required templates exist
-        required_templates = {
-            "profile_extraction": profile_extraction_template,
-            "extraction_rules": extraction_rules_template,
-            "json_format_instructions": json_format_template
-        }
-        
-        # Check for missing templates
-        missing_templates = [name for name, content in required_templates.items() if not content]
-        
-        if missing_templates:
-            print(f"Error: Required prompt templates not found: {', '.join(missing_templates)}.")
-            return {}
-        
-        # Create a prompt that asks the model to extract structured data from the message
-        extraction_prompt = (
-            f"{profile_extraction_template}\n\n"
-            f"{extraction_rules_template}\n\n"
-            f"{json_format_template}\n\n"
-            f"Message: '{message}'"
-        )
-        
         try:
-            # Call Gemini API to extract structured data
-            response = self.client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=[extraction_prompt]
-            )
+            user_preview = user_message[:30] + "..." if user_message and len(user_message) > 30 else user_message
+            bot_preview = bot_response[:30] + "..." if bot_response and len(bot_response) > 30 else bot_response
             
-            # Process and clean the response text
-            extracted_text = self._clean_json_response(response.text)
+            print(f"Logging interaction for contact_id: {contact_id}")
+            print(f"User message topic: {user_preview}")
+            print(f"Bot response type: {bot_preview}")
             
-            # Parse the JSON
-            import json
-            extracted_data = json.loads(extracted_text)
-            
-            # Validate and fix date fields
-            import re
-            from datetime import datetime
-            current_year = datetime.now().year
-            
-            # Fix birthday if present but invalid
-            if 'birthday' in extracted_data and extracted_data['birthday']:
-                # Check if the year is 0000 or invalid
-                birthday_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', extracted_data['birthday'])
-                if birthday_match:
-                    year, month, day = birthday_match.groups()
-                    if year == '0000' or int(year) < 1900 or int(year) > current_year:
-                        # Replace with a reasonable year (current year)
-                        extracted_data['birthday'] = f"{current_year}-{month}-{day}"
-                        print(f"Fixed invalid birthday year: {year} -> {current_year}")
-            
-            # Make sure preferences structure is properly set up
-            if 'preferences' not in extracted_data:
-                extracted_data['preferences'] = {}
-            if 'likes' not in extracted_data['preferences']:
-                extracted_data['preferences']['likes'] = []
-            if 'dislikes' not in extracted_data['preferences']:
-                extracted_data['preferences']['dislikes'] = []
-                
-            # Ensure interests are also added to preferences.likes and vice versa
-            if 'interests' in extracted_data and extracted_data['interests']:
-                if not extracted_data['preferences']['likes']:
-                    extracted_data['preferences']['likes'] = extracted_data['interests'].copy()
-                else:
-                    # Add any interests that aren't already in likes
-                    for interest in extracted_data['interests']:
-                        if interest not in extracted_data['preferences']['likes']:
-                            extracted_data['preferences']['likes'].append(interest)
-            
-            # Also ensure preferences.likes are in interests
-            if extracted_data['preferences']['likes']:
-                if 'interests' not in extracted_data or not extracted_data['interests']:
-                    extracted_data['interests'] = extracted_data['preferences']['likes'].copy()
-                else:
-                    # Add any likes that aren't already in interests
-                    for like in extracted_data['preferences']['likes']:
-                        if like not in extracted_data['interests']:
-                            extracted_data['interests'].append(like)
-            
-            print(f"Extracted and normalized data from message: {extracted_data}")
-            # If contact_id is provided, update the contact with this data
-            if contact_id and extracted_data and self.contact_service:
-                await self._update_contact_with_extracted_data(contact_id, extracted_data)
-            
-            return extracted_data
+            # In a real implementation, you might:
+            # 1. Update the contact's last_connection timestamp
+            # 2. Extract and store topics from the conversation
+            # 3. Update interaction frequency stats
+            pass
         except Exception as e:
-            print(f"Error extracting profile data: {e}")
-            return {}
-
-    async def _call_gemini_api(self, prompt: str, history: List[Dict[str, str]] = None) -> str:
-        """
-        Calls the actual Gemini API.
-        """
-        if not self.client:
-            print("ERROR: Gemini client not initialized. Please set GEMINI_API_KEY.")
-            return "Error: AI model not available."
-
-        print(f"Calling Gemini API with prompt: {prompt[:100]}...")
-        
-        try:
-            model = "gemini-2.0-flash"  # You can also use other models like gemini-pro
-            
-            # Load system prompt if available
-            system_prompt = prompt_loader.load_prompt("system_prompt")
-            
-            if history:
-                print(f"With history (last {len(history)} messages)")
-                # Format the history into the correct structure for the API
-                contents = []
-                
-                # For Gemini, prepend system prompt to the user prompt instead of using system role
-                current_prompt = prompt
-                if system_prompt:
-                    current_prompt = f"{system_prompt}\n\n{prompt}"
-                
-                for msg in history:
-                    contents.append({
-                        "role": msg.get("role", "user"),
-                        "parts": [{"text": part} for part in msg.get("parts", [])]
-                    })
-                
-                # Add the current prompt to contents
-                contents.append({
-                    "role": "user",
-                    "parts": [{"text": current_prompt}]
-                })
-                
-                response = self.client.models.generate_content(
-                    model=model,
-                    contents=contents
-                )
-            else:
-                # For single-turn prompts without history
-                if system_prompt:
-                    # Include system prompt as part of the user prompt instead of a separate role
-                    full_prompt = f"{system_prompt}\n\n{prompt}"
-                    response = self.client.models.generate_content(
-                        model=model,
-                        contents=[full_prompt]
-                    )
-                else:
-                    response = self.client.models.generate_content(
-                        model=model,
-                        contents=[prompt]
-                    )
-        
-            # Extract text from the response
-            return response.text
-            
-        except Exception as e:
-            print(f"Error calling Gemini API: {e}")
-            # Consider more specific error handling based on Gemini API exceptions
-            return f"Sorry, I encountered an error trying to reach the AI: {e}"
-
-        # Old simulated response (remove or keep commented for reference)
-        # if "who are you" in prompt.lower():
-        #     return "I am a helpful AI assistant here to help you manage your contact interactions."
-        # if "what information do you need" in prompt.lower():
-        #     return "To get started, could you tell me a bit about this contact? For example, what\'s their primary role or how do you know them?"
-        # if "last time we talked" in prompt.lower():
-        #     return "I can check my records. According to my (simulated) data, your last conversation was about a project update last Tuesday."
-        # return f"Gemini's simulated response to: {prompt}"
+            print(f"Error in _log_interaction: {e}")
+            # Don't let logging errors affect the main flow
 
     async def handle_message(self, contact_id: str, user_message: str) -> Dict[str, Any]:
         """
@@ -223,61 +41,33 @@ class ChatService:
         if not contact:
             return {"error": "Contact not found", "status_code": 404}
         
-        # Construct the prompt for Gemini focused on contact profile building
-        prompt_parts = []
-        
-        # Load base chat instructions
-        chat_base_instructions = prompt_loader.load_prompt("chat_base_instructions")
-        if chat_base_instructions:
-            prompt_parts.append(chat_base_instructions)
-        else:
-            print("Warning: chat_base_instructions.md template not found. Creating it...")
-            self._create_template_if_missing("chat_base_instructions",
-                "# Chat Base Instructions\n\nYou are a helpful assistant for enriching contact relationships. You keep responses brief and conversational.")
-            prompt_parts.append("You are a helpful assistant for enriching contact relationships. You keep responses brief and conversational.")
-        
-        prompt_parts.append(f"You are currently helping with a contact named {contact.get('name', 'this person')}.")
-        
-        # Add context from relevant contact fields
-        if contact.get('interests'):
-            prompt_parts.append(f"Known interests: {', '.join(contact.get('interests'))}")
-        if contact.get('conversation_topics'):
-            prompt_parts.append(f"Previous conversation topics: {', '.join(contact.get('conversation_topics'))}")
-        if contact.get('important_dates'):
-            dates = [f"{d.get('description')}: {d.get('date')}" for d in contact.get('important_dates')]
-            prompt_parts.append(f"Important dates: {', '.join(dates)}")
-        if contact.get('last_connection'):
-            prompt_parts.append(f"Last connection: {contact.get('last_connection')}")
-        if contact.get('relationship_type'):
-            prompt_parts.append(f"Relationship type: {contact.get('relationship_type')}")
-        if contact.get('preferences') and contact.get('preferences').get('likes'):
-            prompt_parts.append(f"Likes: {', '.join(contact.get('preferences').get('likes'))}")
-        if contact.get('preferences') and contact.get('preferences').get('dislikes'):
-            prompt_parts.append(f"Dislikes: {', '.join(contact.get('preferences').get('dislikes'))}")
-        if contact.get('family_details'):
-            prompt_parts.append(f"Family details: {contact.get('family_details')}")
-        if contact.get('personality'):
-            prompt_parts.append(f"Personality: {contact.get('personality')}")
-        
-        # Load and add assistant instructions from markdown file
-        assistant_instructions = prompt_loader.load_prompt("assistant_instructions")
-        if assistant_instructions:
-            prompt_parts.append(assistant_instructions)
-        else:
-            print("Warning: assistant_instructions.md not found")
-        prompt_parts.append(f"The user's message is: '{user_message}'")
-        
-        # Final prompt assembly
-        full_prompt = "\\n".join(prompt_parts)
-        
-        # Call the API with our contact-focused prompt
-        bot_response_text = await self._call_gemini_api(prompt=full_prompt)
-
+        # Use GeminiClient to handle the conversation
+        try:
+            bot_response_text = await self.client.handle_conversation(contact, user_message)
+        except Exception as e:
+            print(f"Error in handle_conversation: {e}")
+            bot_response_text = "I'm sorry, I encountered an error processing your message. Please try again later."
+            
         # Log the interaction instead of storing conversation history
         await self._log_interaction(contact_id, user_message, bot_response_text)
         
-        # Extract any potential profile data from the messages and update the contact
-        extracted_data = await self._extract_profile_data(user_message, contact_id)
+        # Extract any potential profile data directly
+        extracted_data = {}
+        if self.client.is_available() and user_message:
+            try:
+                # Get raw extracted data from GeminiClient
+                extracted_data = await self.client.extract_profile_data(user_message)
+                
+                # Normalize the data using the external utility function
+                extracted_data = normalize_extracted_data(extracted_data)
+                
+                # Update contact if we have data
+                if contact_id and extracted_data:
+                    await self._update_contact_with_extracted_data(contact_id, extracted_data)
+            except Exception as e:
+                print(f"Error extracting or processing profile data: {e}")
+                # Continue without extracted data
+                extracted_data = {}
 
         return {
             "contact_id": contact_id,
@@ -298,58 +88,12 @@ class ChatService:
         # Check how complete the contact's profile is
         profile_completeness = self._calculate_profile_completeness(contact)
         
-        # Load the initial greeting template
-        greeting_template = prompt_loader.load_prompt("initial_greeting")
-        
-        # Start with contact's name and basic context
-        context_parts = [
-            f"You're helping with {contact.get('name', 'this person')}."
-        ]
-        
-        # Add minimal context
-        if contact.get('interests'):
-            context_parts.append(f"Known interests: {', '.join(contact.get('interests'))}.")
-        if contact.get('family_details'):
-            context_parts.append(f"Family details: {contact.get('family_details')}.")
-        if contact.get('personality'):
-            context_parts.append(f"Personality: {contact.get('personality')}.")
-        
-        # Add profile completeness context
-        if profile_completeness < 50:
-            context_parts.append(f"This contact's profile is quite incomplete ({profile_completeness}% complete).")
-        else:
-            context_parts.append(f"This contact's profile is {profile_completeness}% complete.")
-        
-        # If we don't have a greeting template, we should create one
-        if not greeting_template:
-            print("Warning: initial_greeting.md template not found. Creating a placeholder template.")
-            
-            # Define the template content
-            placeholder_template = """# Initial Greeting
-
-You are a friendly, conversational assistant that helps remember details about contacts.
-Keep your response very brief (1-3 sentences) and conversational, like a text message from a friend.
-
-## For Incomplete Profiles
-
-This contact's profile is quite incomplete. Ask a single, specific question that would help build the profile. Focus on interests, important dates, or relationship details. Be very casual and brief - no explanations or long sentences.
-
-Example tone: "Hey! Does [Name] have any hobbies or interests I should know about?"
-
-## For More Complete Profiles
-
-Briefly acknowledge something we know about them and ask one follow-up question. Keep it very conversational, like texting a friend. No bullet points, no lists, and no more than 2-3 short sentences.
-
-Example tone: "I remember [Name] likes hiking. Have they been on any interesting trails lately?"
-"""
-            
-            # Create the template
-            if self._create_template_if_missing("initial_greeting", placeholder_template):
-                greeting_template = placeholder_template
-                
-        # Combine the template with context parts
-        prompt = f"{greeting_template}\n\n" + "\n".join(context_parts)
-        greeting_text = await self._call_gemini_api(prompt)
+        # Use GeminiClient for greeting generation
+        try:
+            greeting_text = await self.client.get_initial_greeting(contact, profile_completeness)
+        except Exception as e:
+            print(f"Error getting initial greeting: {e}")
+            greeting_text = "Hello! I'm here to help you keep in touch with your contacts."
         
         return {
             "contact_id": contact_id,
@@ -405,6 +149,11 @@ Example tone: "I remember [Name] likes hiking. Have they been on any interesting
             
         # Create an update payload
         update_payload = {}
+        
+        # Process nickname
+        if 'nickname' in extracted_data and extracted_data['nickname']:
+            update_payload['nickname'] = extracted_data['nickname']
+            print(f"Updating nickname to {extracted_data['nickname']}")
         
         # Process birthday
         if 'birthday' in extracted_data and extracted_data['birthday']:
@@ -533,70 +282,6 @@ Example tone: "I remember [Name] likes hiking. Have they been on any interesting
                         print("Couldn't update through the API. Contact may need manual updating.")
                     except Exception as inner_e:
                         print(f"Alternative update method also failed: {inner_e}")
-    
-    def _create_template_if_missing(self, template_name: str, template_content: str) -> bool:
-        """
-        Create a template file if it doesn't already exist
-        
-        Args:
-            template_name: The name of the template (without .md extension)
-            template_content: The content to write to the template file
-            
-        Returns:
-            bool: True if file was created, False otherwise
-        """
-        from pathlib import Path
-        
-        # Define the template path
-        template_path = prompt_loader.prompts_dir / f"{template_name}.md"
-        
-        # Check if template already exists
-        if template_path.exists():
-            return False
-            
-        try:
-            # Create the directory if it doesn't exist
-            template_path.parent.mkdir(exist_ok=True)
-            
-            # Write the template
-            with open(template_path, "w", encoding="utf-8") as file:
-                file.write(template_content)
-            
-            print(f"Created {template_name}.md template at {template_path}")
-            return True
-        except Exception as e:
-            print(f"Error creating {template_name}.md template: {e}")
-            return False
-    
-    def _clean_json_response(self, text: str) -> str:
-        """
-        Clean and prepare JSON text from AI response.
-        
-        Args:
-            text: The raw text from the AI response
-            
-        Returns:
-            Cleaned JSON string ready for parsing
-        """
-        # Start with basic cleaning
-        cleaned_text = text.strip()
-        
-        # Remove markdown code blocks if present
-        if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text[7:]
-        elif cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text[3:]
-            
-        if cleaned_text.endswith("```"):
-            cleaned_text = cleaned_text[:-3]
-            
-        # Final trim of whitespace
-        cleaned_text = cleaned_text.strip()
-        
-        # Handle edge cases: if the response still isn't valid JSON,
-        # we could add additional processing here in the future
-        
-        return cleaned_text
     
     def _sanitize_contact_data(self, data: Dict) -> Dict:
         """

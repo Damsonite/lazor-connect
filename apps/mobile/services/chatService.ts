@@ -6,6 +6,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // Increase timeout to 30 seconds
 });
 
 export const sendChatMessage = async (
@@ -19,7 +20,16 @@ export const sendChatMessage = async (
     console.log(`Message sent to AI for contact ${contactId}:`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`Error sending message for contact ${contactId}:`, error);
+    // More detailed error logging
+    if (axios.isAxiosError(error)) {
+      console.error(`Error sending message for contact ${contactId}:`, {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    } else {
+      console.error(`Error sending message for contact ${contactId}:`, error);
+    }
     throw error;
   }
 };
