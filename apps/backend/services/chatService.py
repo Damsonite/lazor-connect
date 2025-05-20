@@ -57,10 +57,8 @@ class ChatService:
             try:
                 # Get raw extracted data from GeminiClient
                 extracted_data = await self.client.extract_profile_data(user_message)
-                
                 # Normalize the data using the external utility function
                 extracted_data = normalize_extracted_data(extracted_data)
-                
                 # Update contact if we have data
                 if contact_id and extracted_data:
                     await self._update_contact_with_extracted_data(contact_id, extracted_data)
@@ -68,6 +66,35 @@ class ChatService:
                 print(f"Error extracting or processing profile data: {e}")
                 # Continue without extracted data
                 extracted_data = {}
+
+        # --- Update last_connection if AI extracted it ---
+        if extracted_data and 'last_connection' in extracted_data and extracted_data['last_connection']:
+            from datetime import datetime, timezone, timedelta
+            try:
+                last_conn = extracted_data['last_connection']
+                # Handle common relative dates
+                if isinstance(last_conn, str):
+                    lowered = last_conn.strip().lower()
+                    if lowered == 'yesterday':
+                        dt = datetime.now(timezone.utc) - timedelta(days=1)
+                        last_conn = dt.replace(hour=12, minute=0, second=0, microsecond=0).isoformat()
+                    elif lowered == 'today':
+                        dt = datetime.now(timezone.utc)
+                        last_conn = dt.replace(hour=12, minute=0, second=0, microsecond=0).isoformat()
+                    else:
+                        try:
+                            dt = datetime.fromisoformat(last_conn)
+                            last_conn = dt.astimezone(timezone.utc).isoformat()
+                        except Exception:
+                            print(f"Could not parse last_connection string as ISO datetime: {last_conn}")
+                            last_conn = None
+                elif hasattr(last_conn, 'isoformat'):
+                    last_conn = last_conn.astimezone(timezone.utc).isoformat()
+                if last_conn:
+                    self.contact_service.update_contact(contact_id, {"last_connection": last_conn})
+            except Exception as e:
+                print(f"Failed to update last_connection for contact {contact_id} from AI extraction: {e}")
+        # --- End update ---
 
         return {
             "contact_id": contact_id,
