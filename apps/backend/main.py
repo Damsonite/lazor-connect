@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import contacts, health
+from routers import contacts, health, chat
 
 app = FastAPI(
     title="Lazor Connect API",
@@ -19,3 +19,4 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(contacts.router)
+app.include_router(chat.router)

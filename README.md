@@ -6,13 +6,14 @@
 
 - **Contact Management**: Create, edit, and delete meaningful contacts.
 - **Relationship Management**: Track interactions, conversation topics, and connection strength.
+- **AI-Powered Chat**: Get personalized conversation topics, relationship building suggestions, and profile building assistance using Gemini AI.
 - **Authentication**: Integrated Supabase login.
 - **API Communication**: Secure interaction between mobile and backend.
 - **Scalable Architecture**: Monorepo with clear separation of concerns.
 
 ## 🛠️ Technologies
 
-- **Backend**: FastAPI, Pydantic, Uvicorn
+- **Backend**: FastAPI, Pydantic, Uvicorn, Google Gemini AI
 - **Mobile**: React Native (Expo), Zustand, Expo Router, NativeWind (TailwindCSS)
 - **Database & Auth**: Supabase
 
@@ -113,7 +114,12 @@ The backend `.env` file should contain:
 # apps/backend/.env
 SUPABASE_URL=your_supabase_url_here
 SUPABASE_KEY=your_supabase_key_here
+GEMINI_API_KEY=your_gemini_api_key_here  # Required for chat functionality
 ```
+
+### 🤖 Chat Functionality
+
+For detailed instructions on using the AI-powered chat functionality, refer to the [Chat Guide](CHAT_GUIDE.md).
 
 Access them in your code:
 

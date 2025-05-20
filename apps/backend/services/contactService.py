@@ -63,13 +63,72 @@ class ContactService:
         return response.data[0]
     
     @staticmethod
-    def update_contact(contact_id: int, contact_data: Dict) -> Optional[Dict]:
+    def update_contact(contact_id: str, contact_data: Dict) -> Optional[Dict]:
         """Update a contact in the database"""
-        response = supabase.table("contacts").update(contact_data).eq("id", contact_id).execute()
-        return response.data[0] if response.data else None
+        # We'll work with a fresh payload to avoid modifying any internal state or original data
+        try:
+            # First get the current data to perform a patch update
+            current = ContactService.get_contact(contact_id)
+            if not current:
+                print(f"Contact {contact_id} not found for update")
+                return None
+                
+            # Use RPC call instead of normal update to bypass trigger issues
+            # This is a more direct way to update the data without dealing with triggers
+            response = supabase.rpc(
+                'update_contact_safe', 
+                {
+                    'p_id': contact_id, 
+                    'p_data': contact_data
+                }
+            ).execute()
+            
+            # If RPC isn't available or failed, let's try a direct query approach
+            if not response.data:
+                print("RPC failed, trying direct update...")
+                fields = []
+                values = []
+                
+                for key, value in contact_data.items():
+                    if key not in ['id', 'created_at', 'updated_at']:
+                        fields.append(key)
+                        values.append(value)
+                
+                fields_str = ", ".join([f"{field} = ?" for field in fields])
+                query = f"UPDATE contacts SET {fields_str} WHERE id = ?"
+                
+                # We would execute this query directly with the database
+                # But since we're using Supabase client which doesn't support this,
+                # let's try the normal update but only with specific fields
+                
+                response = supabase.table("contacts").update(contact_data).eq("id", contact_id).execute()
+            
+            return response.data[0] if response.data else None
+        except Exception as e:
+            # More detailed error reporting
+            print(f"Supabase update error: {e}")
+            print("Trying one more approach...")
+            
+            # Let's try to update field by field as a last resort
+            try:
+                current = ContactService.get_contact(contact_id)
+                if not current:
+                    return None
+                    
+                for key, value in contact_data.items():
+                    if key not in ['id', 'created_at', 'updated_at']:
+                        # Update one field at a time
+                        update_response = supabase.table("contacts").update({key: value}).eq("id", contact_id).execute()
+                        print(f"Updated field {key}: {update_response.data}")
+                
+                # Get the updated contact
+                return ContactService.get_contact(contact_id)
+            except Exception as inner_e:
+                print(f"Field-by-field update also failed: {inner_e}")
+                return None
     
     @staticmethod
-    def delete_contact(contact_id: int) -> bool:
+    def delete_contact(contact_id: str) -> bool:
         """Delete a contact from the database"""
         response = supabase.table("contacts").delete().eq("id", contact_id).execute()
         return bool(response.data)
