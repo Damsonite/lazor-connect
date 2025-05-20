@@ -53,7 +53,7 @@ class ContactService:
         for field in ["nickname", "birthday", "contact_methods", 
                      "relationship_type", "relationship_strength",
                      "conversation_topics", "important_dates", "reminders",
-                     "interests", "family_details", "preferences",
+                     "interests", "family_details", "preferences", "personality",
                      "last_connection", "avg_days_btw_contacts", 
                      "recommended_contact_freq_days"]:
             if field in contact and contact[field] is not None:
@@ -109,6 +109,15 @@ class ContactService:
                     clean_data['preferences']['dislikes'] = []
                 
                 print(f"Formatted preferences for update: {clean_data['preferences']}")
+                
+            # Special handling for personality field
+            if 'personality' in clean_data:
+                # If the current contact already has personality data, append the new information
+                if current and 'personality' in current and current['personality']:
+                    # If we're adding new information, append it to existing with a separator
+                    if clean_data['personality']:
+                        clean_data['personality'] = f"{current['personality']}\n\n{clean_data['personality']}"
+                print(f"Formatted personality for update: {clean_data['personality']}")
             
             # Special handling for date fields to ensure proper format
             import re

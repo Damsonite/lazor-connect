@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { ScrollView } from 'react-native';
 
 import SaveBtn from '~/components/contacts/SaveBtn';
 import Container from '~/components/shared/Container';
@@ -10,6 +11,7 @@ import { createContact } from '~/services/contactService';
 const ContactCreate: React.FC = () => {
   const [name, setName] = useState('');
   const [isNameValid, setIsNameValid] = useState(true);
+  const [personality, setPersonality] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shouldValidate, setShouldValidate] = useState(false);
@@ -26,10 +28,15 @@ const ContactCreate: React.FC = () => {
     setError(null);
 
     try {
-      await createContact({ name });
+      // Include personality if provided
+      await createContact({
+        name,
+        ...(personality ? { personality } : {}),
+      });
 
       // Reset form and validation state
       setName('');
+      setPersonality('');
       setShouldValidate(false);
 
       // Navigate back to contact list
@@ -45,17 +52,28 @@ const ContactCreate: React.FC = () => {
 
   return (
     <Container>
-      <FormField
-        label="Name"
-        required
-        value={name}
-        onChangeText={setName}
-        placeholder="Enter name"
-        onValidationChange={setIsNameValid}
-        validateOnSubmit={shouldValidate}
-      />
+      <ScrollView style={{ flex: 1, width: '100%' }}>
+        <FormField
+          label="Name"
+          required
+          value={name}
+          onChangeText={setName}
+          placeholder="Enter name"
+          onValidationChange={setIsNameValid}
+          validateOnSubmit={shouldValidate}
+        />
 
-      <Loading loading={isLoading} error={error} />
+        <FormField
+          label="Personality"
+          value={personality}
+          onChangeText={setPersonality}
+          placeholder="Describe personality traits, emotional characteristics, and behaviors"
+          multiline
+          numberOfLines={5}
+        />
+
+        <Loading loading={isLoading} error={error} />
+      </ScrollView>
 
       {!isLoading && <SaveBtn onPress={handleSubmit} />}
     </Container>

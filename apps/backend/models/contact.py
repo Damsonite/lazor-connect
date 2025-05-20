@@ -60,6 +60,7 @@ class ContactBase(BaseModel):
     interests: Optional[List[str]] = None
     family_details: Optional[str] = None
     preferences: Optional[Preferences] = None
+    personality: Optional[str] = None  # New field for personality information
 
 
 class ContactCreate(ContactBase):
@@ -95,3 +96,4 @@ class ContactUpdate(BaseModel):
     interests: Optional[List[str]] = None
     family_details: Optional[str] = None
     preferences: Optional[Preferences] = None
+    personality: Optional[str] = None

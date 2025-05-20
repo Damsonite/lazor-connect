@@ -3,6 +3,7 @@ from typing import Dict, Any, List
 from google import genai
 
 from .contactService import ContactService 
+from .promptService import prompt_loader
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -44,24 +45,30 @@ class ChatService:
         if not self.client or not message:
             return {}
         
+        # Load prompt templates from markdown files
+        profile_extraction_template = prompt_loader.load_prompt("profile_extraction")
+        extraction_rules_template = prompt_loader.load_prompt("extraction_rules")
+        json_format_template = prompt_loader.load_prompt("json_format_instructions")
+        
+        # Check if required templates exist
+        required_templates = {
+            "profile_extraction": profile_extraction_template,
+            "extraction_rules": extraction_rules_template,
+            "json_format_instructions": json_format_template
+        }
+        
+        # Check for missing templates
+        missing_templates = [name for name, content in required_templates.items() if not content]
+        
+        if missing_templates:
+            print(f"Error: Required prompt templates not found: {', '.join(missing_templates)}.")
+            return {}
+        
         # Create a prompt that asks the model to extract structured data from the message
         extraction_prompt = (
-            "Extract structured contact information from this message. "
-            "ONLY return data that's clearly mentioned in this exact message (not previous context).\n"
-            "Return a JSON object with ONLY the following properties where info is clearly present:\n"
-            "- birthday: Extract birthday in ISO format (YYYY-MM-DD) if mentioned. Use current year if no year specified.\n"
-            "- interests: Array of interests or hobbies mentioned, including things they like (e.g., if message says 'likes apples', add 'apples' to interests)\n"
-            "- important_dates: Array of objects with {date: 'YYYY-MM-DD', description: 'string'}\n"
-            "- relationship_type: String (friend, family, colleague, etc)\n"
-            "- preferences: {likes: [array of things they like], dislikes: [array of things they dislike]}\n"
-            "- family_details: String with family information\n\n"
-            "IMPORTANT EXTRACTION RULES:\n"
-            "1. If a message mentions liking something (e.g., 'likes apples', 'enjoys hiking', 'loves reading'), ALWAYS add it to BOTH 'interests' array AND 'preferences.likes' array.\n"
-            "2. Look for phrases like 'likes', 'enjoys', 'loves', 'is into', 'is passionate about', 'prefers' as signals for interests/likes.\n"
-            "3. Extract specific items (e.g., 'apples' from 'likes apples') rather than entire phrases.\n"
-            "4. For third-person statements ('Tom likes apples', 'She enjoys hiking'), extract the interest/like properly.\n"
-            "5. For dates without a year (e.g., 'May 5'), always use the current year instead of '0000'.\n\n"
-            "Format as valid JSON only. No explanations or other text. Return empty object if no relevant information.\n\n"
+            f"{profile_extraction_template}\n\n"
+            f"{extraction_rules_template}\n\n"
+            f"{json_format_template}\n\n"
             f"Message: '{message}'"
         )
         
@@ -72,18 +79,8 @@ class ChatService:
                 contents=[extraction_prompt]
             )
             
-            # Try to parse the response as JSON            
-            extracted_text = response.text.strip()
-            
-            # Sometimes the model returns markdown code blocks, so strip those if present
-            if extracted_text.startswith("```json"):
-                extracted_text = extracted_text[7:]
-            if extracted_text.startswith("```"):
-                extracted_text = extracted_text[3:]
-            if extracted_text.endswith("```"):
-                extracted_text = extracted_text[:-3]
-            
-            extracted_text = extracted_text.strip()
+            # Process and clean the response text
+            extracted_text = self._clean_json_response(response.text)
             
             # Parse the JSON
             import json
@@ -156,11 +153,18 @@ class ChatService:
         try:
             model = "gemini-2.0-flash"  # You can also use other models like gemini-pro
             
+            # Load system prompt if available
+            system_prompt = prompt_loader.load_prompt("system_prompt")
+            
             if history:
                 print(f"With history (last {len(history)} messages)")
                 # Format the history into the correct structure for the API
-                # This assumes history is a list like [{"role": "user", "parts": ["Hello"]}, ...]
                 contents = []
+                
+                # For Gemini, prepend system prompt to the user prompt instead of using system role
+                current_prompt = prompt
+                if system_prompt:
+                    current_prompt = f"{system_prompt}\n\n{prompt}"
                 
                 for msg in history:
                     contents.append({
@@ -171,7 +175,7 @@ class ChatService:
                 # Add the current prompt to contents
                 contents.append({
                     "role": "user",
-                    "parts": [{"text": prompt}]
+                    "parts": [{"text": current_prompt}]
                 })
                 
                 response = self.client.models.generate_content(
@@ -180,11 +184,19 @@ class ChatService:
                 )
             else:
                 # For single-turn prompts without history
-                response = self.client.models.generate_content(
-                    model=model,
-                    contents=[prompt]
-                )
-            
+                if system_prompt:
+                    # Include system prompt as part of the user prompt instead of a separate role
+                    full_prompt = f"{system_prompt}\n\n{prompt}"
+                    response = self.client.models.generate_content(
+                        model=model,
+                        contents=[full_prompt]
+                    )
+                else:
+                    response = self.client.models.generate_content(
+                        model=model,
+                        contents=[prompt]
+                    )
+        
             # Extract text from the response
             return response.text
             
@@ -213,7 +225,17 @@ class ChatService:
         
         # Construct the prompt for Gemini focused on contact profile building
         prompt_parts = []
-        prompt_parts.append(f"You are a helpful assistant for enriching contact relationships. You keep responses brief and conversational.")
+        
+        # Load base chat instructions
+        chat_base_instructions = prompt_loader.load_prompt("chat_base_instructions")
+        if chat_base_instructions:
+            prompt_parts.append(chat_base_instructions)
+        else:
+            print("Warning: chat_base_instructions.md template not found. Creating it...")
+            self._create_template_if_missing("chat_base_instructions",
+                "# Chat Base Instructions\n\nYou are a helpful assistant for enriching contact relationships. You keep responses brief and conversational.")
+            prompt_parts.append("You are a helpful assistant for enriching contact relationships. You keep responses brief and conversational.")
+        
         prompt_parts.append(f"You are currently helping with a contact named {contact.get('name', 'this person')}.")
         
         # Add context from relevant contact fields
@@ -232,14 +254,17 @@ class ChatService:
             prompt_parts.append(f"Likes: {', '.join(contact.get('preferences').get('likes'))}")
         if contact.get('preferences') and contact.get('preferences').get('dislikes'):
             prompt_parts.append(f"Dislikes: {', '.join(contact.get('preferences').get('dislikes'))}")
+        if contact.get('family_details'):
+            prompt_parts.append(f"Family details: {contact.get('family_details')}")
+        if contact.get('personality'):
+            prompt_parts.append(f"Personality: {contact.get('personality')}")
         
-        # Add specific goals for the assistant - emphasizing brevity and conversation
-        prompt_parts.append("IMPORTANT INSTRUCTIONS:")
-        prompt_parts.append("1. Keep your responses brief and conversational (1-3 short sentences only).")
-        prompt_parts.append("2. Ask only one follow-up question at a time to learn more about this contact.")
-        prompt_parts.append("3. Focus on collecting interests, important dates, and relationship details.")
-        prompt_parts.append("4. No bullet points or lists - respond like a friendly chat message.")
-        prompt_parts.append("5. Extract information naturally without obvious prompting.")
+        # Load and add assistant instructions from markdown file
+        assistant_instructions = prompt_loader.load_prompt("assistant_instructions")
+        if assistant_instructions:
+            prompt_parts.append(assistant_instructions)
+        else:
+            print("Warning: assistant_instructions.md not found")
         prompt_parts.append(f"The user's message is: '{user_message}'")
         
         # Final prompt assembly
@@ -273,34 +298,57 @@ class ChatService:
         # Check how complete the contact's profile is
         profile_completeness = self._calculate_profile_completeness(contact)
         
-        # Create a brief, conversational greeting
-        prompt = (
-            f"You are a friendly, conversational assistant that helps remember details about contacts. "
-            f"You're helping with {contact.get('name', 'this person')}. "
-            f"Keep your response very brief (1-3 sentences) and conversational, like a text message from a friend. "
-        )
+        # Load the initial greeting template
+        greeting_template = prompt_loader.load_prompt("initial_greeting")
+        
+        # Start with contact's name and basic context
+        context_parts = [
+            f"You're helping with {contact.get('name', 'this person')}."
+        ]
         
         # Add minimal context
         if contact.get('interests'):
-            prompt += f"Known interests: {', '.join(contact.get('interests'))}. "
+            context_parts.append(f"Known interests: {', '.join(contact.get('interests'))}.")
+        if contact.get('family_details'):
+            context_parts.append(f"Family details: {contact.get('family_details')}.")
+        if contact.get('personality'):
+            context_parts.append(f"Personality: {contact.get('personality')}.")
         
+        # Add profile completeness context
         if profile_completeness < 50:
-            prompt += (
-                f"This contact's profile is quite incomplete ({profile_completeness}% complete). "
-                "Ask a single, specific question that would help build the profile. "
-                "Focus on interests, important dates, or relationship details. "
-                "Be very casual and brief - no explanations or long sentences. "
-                "Example tone: 'Hey! Does [Name] have any hobbies or interests I should know about?'"
-            )
+            context_parts.append(f"This contact's profile is quite incomplete ({profile_completeness}% complete).")
         else:
-            prompt += (
-                f"This contact's profile is {profile_completeness}% complete. "
-                "Briefly acknowledge something we know about them and ask one follow-up question. "
-                "Keep it very conversational, like texting a friend. "
-                "No bullet points, no lists, and no more than 2-3 short sentences. "
-                "Example tone: 'I remember [Name] likes hiking. Have they been on any interesting trails lately?'"
-            )
+            context_parts.append(f"This contact's profile is {profile_completeness}% complete.")
+        
+        # If we don't have a greeting template, we should create one
+        if not greeting_template:
+            print("Warning: initial_greeting.md template not found. Creating a placeholder template.")
             
+            # Define the template content
+            placeholder_template = """# Initial Greeting
+
+You are a friendly, conversational assistant that helps remember details about contacts.
+Keep your response very brief (1-3 sentences) and conversational, like a text message from a friend.
+
+## For Incomplete Profiles
+
+This contact's profile is quite incomplete. Ask a single, specific question that would help build the profile. Focus on interests, important dates, or relationship details. Be very casual and brief - no explanations or long sentences.
+
+Example tone: "Hey! Does [Name] have any hobbies or interests I should know about?"
+
+## For More Complete Profiles
+
+Briefly acknowledge something we know about them and ask one follow-up question. Keep it very conversational, like texting a friend. No bullet points, no lists, and no more than 2-3 short sentences.
+
+Example tone: "I remember [Name] likes hiking. Have they been on any interesting trails lately?"
+"""
+            
+            # Create the template
+            if self._create_template_if_missing("initial_greeting", placeholder_template):
+                greeting_template = placeholder_template
+                
+        # Combine the template with context parts
+        prompt = f"{greeting_template}\n\n" + "\n".join(context_parts)
         greeting_text = await self._call_gemini_api(prompt)
         
         return {
@@ -318,7 +366,7 @@ class ChatService:
         important_fields = [
             'name', 'relationship_type', 'interests', 'conversation_topics', 
             'important_dates', 'last_connection', 'preferences', 
-            'family_details', 'relationship_strength', 'recommended_contact_freq_days'
+            'family_details', 'personality', 'relationship_strength', 'recommended_contact_freq_days'
         ]
         
         # Count filled fields, checking for nested fields too
@@ -427,6 +475,15 @@ class ChatService:
         if 'family_details' in extracted_data and extracted_data['family_details']:
             update_payload['family_details'] = extracted_data['family_details']
             print(f"Updating family details")
+            
+        # Process personality information
+        if 'personality' in extracted_data and extracted_data['personality']:
+            # If there's existing personality data, append new information
+            if contact.get('personality'):
+                update_payload['personality'] = f"{contact.get('personality')}\n\n{extracted_data['personality']}"
+            else:
+                update_payload['personality'] = extracted_data['personality']
+            print(f"Updating personality information")
         
         # Update the contact if we have data to update
         if update_payload:
@@ -476,6 +533,70 @@ class ChatService:
                         print("Couldn't update through the API. Contact may need manual updating.")
                     except Exception as inner_e:
                         print(f"Alternative update method also failed: {inner_e}")
+    
+    def _create_template_if_missing(self, template_name: str, template_content: str) -> bool:
+        """
+        Create a template file if it doesn't already exist
+        
+        Args:
+            template_name: The name of the template (without .md extension)
+            template_content: The content to write to the template file
+            
+        Returns:
+            bool: True if file was created, False otherwise
+        """
+        from pathlib import Path
+        
+        # Define the template path
+        template_path = prompt_loader.prompts_dir / f"{template_name}.md"
+        
+        # Check if template already exists
+        if template_path.exists():
+            return False
+            
+        try:
+            # Create the directory if it doesn't exist
+            template_path.parent.mkdir(exist_ok=True)
+            
+            # Write the template
+            with open(template_path, "w", encoding="utf-8") as file:
+                file.write(template_content)
+            
+            print(f"Created {template_name}.md template at {template_path}")
+            return True
+        except Exception as e:
+            print(f"Error creating {template_name}.md template: {e}")
+            return False
+    
+    def _clean_json_response(self, text: str) -> str:
+        """
+        Clean and prepare JSON text from AI response.
+        
+        Args:
+            text: The raw text from the AI response
+            
+        Returns:
+            Cleaned JSON string ready for parsing
+        """
+        # Start with basic cleaning
+        cleaned_text = text.strip()
+        
+        # Remove markdown code blocks if present
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        elif cleaned_text.startswith("```"):
+            cleaned_text = cleaned_text[3:]
+            
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+            
+        # Final trim of whitespace
+        cleaned_text = cleaned_text.strip()
+        
+        # Handle edge cases: if the response still isn't valid JSON,
+        # we could add additional processing here in the future
+        
+        return cleaned_text
     
     def _sanitize_contact_data(self, data: Dict) -> Dict:
         """

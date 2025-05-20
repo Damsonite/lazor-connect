@@ -39,6 +39,9 @@ const createContact = async (contact: ContactCreate) => {
       ...(contact.preferences && {
         preferences: contact.preferences,
       }),
+      ...(contact.personality && {
+        personality: contact.personality,
+      }),
       ...(contact.last_connection && {
         last_connection: contact.last_connection,
       }),

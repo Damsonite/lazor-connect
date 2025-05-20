@@ -44,6 +44,18 @@ export default function ContactData({ contact }: { contact: Contact }) {
             {new Date(contact.last_connection).toLocaleDateString()}
           </ContactDetailField>
         )}
+
+        {contact.family_details && (
+          <ContactDetailField label="Family details" inline={false}>
+            <Text className="text-md text-slate-800">{contact.family_details}</Text>
+          </ContactDetailField>
+        )}
+
+        {contact.personality && (
+          <ContactDetailField label="Personality" inline={false}>
+            <Text className="text-md text-slate-800">{contact.personality}</Text>
+          </ContactDetailField>
+        )}
       </View>
     </View>
   );

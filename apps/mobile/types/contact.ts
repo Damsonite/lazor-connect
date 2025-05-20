@@ -25,6 +25,7 @@ interface ContactBase {
   interests?: string[]; // e.g., 'hiking', 'reading'
   family_details?: string; // e.g., 'has a dog named Max'
   preferences?: { likes?: string[]; dislikes?: string[] }; // e.g., 'likes chocolate', 'dislikes broccoli'
+  personality?: string; // Information about contact's personality, emotions, traits, etc.
 }
 
 interface Contact extends ContactBase {
