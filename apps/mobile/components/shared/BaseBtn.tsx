@@ -11,7 +11,7 @@ const Button = forwardRef<View, ButtonProps>(({ title, children, ...touchablePro
     <TouchableOpacity
       ref={ref}
       {...touchableProps}
-      className={`items-center justify-center rounded-[28px] bg-indigo-500 p-4 shadow-md ${touchableProps.className}`}>
+      className={`bg-primary items-center justify-center rounded-[28px] p-4 shadow-md ${touchableProps.className}`}>
       {title && <Text className="text-center text-lg font-semibold text-white">{title}</Text>}
       {children && children}
     </TouchableOpacity>
