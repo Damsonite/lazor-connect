@@ -47,7 +47,7 @@ export default function BaseList<T>({
   );
 
   return (
-    <View className="flex-1">
+    <View className="bg-backround flex-1">
       <LoadingIndicator loading={loading} error={error} />
       {!loading && !error && (
         <FlashList

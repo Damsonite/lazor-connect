@@ -1,5 +1,5 @@
 import { Send } from 'lucide-react-native';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 interface ChatInputProps {
   inputMessage: string;
@@ -15,7 +15,7 @@ export default function ChatInput({
   sendingMessage,
 }: ChatInputProps) {
   return (
-    <View style={styles.inputContainer}>
+    <KeyboardAvoidingView style={styles.inputContainer}>
       <TextInput
         style={styles.input}
         value={inputMessage}
@@ -29,7 +29,7 @@ export default function ChatInput({
         disabled={!inputMessage.trim() || sendingMessage}>
         <Send size={20} color={inputMessage.trim() ? '#fff' : '#aaa'} />
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

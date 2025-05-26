@@ -6,7 +6,6 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
-import { StatusBar } from 'react-native';
 
 import ThemeProvider from '~/context/ThemeProvider';
 import '~/global.css';
@@ -55,8 +54,6 @@ export default function RootLayout() {
         <Stack.Screen name="contact/create" options={{ title: 'Create contact' }} />
         <Stack.Screen name="contact/[id]" options={{ title: 'Chat Assistant' }} />
       </Stack>
-
-      <StatusBar />
     </ThemeProvider>
   );
 }
