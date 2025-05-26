@@ -1,4 +1,4 @@
-import { Exo2_500Medium } from '@expo-google-fonts/exo-2';
+import { Exo2_500Medium, Exo2_600SemiBold } from '@expo-google-fonts/exo-2';
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { Orbitron_700Bold } from '@expo-google-fonts/orbitron';
 import { useFonts } from 'expo-font';
@@ -22,6 +22,7 @@ export default function RootLayout() {
     InterRegular: Inter_400Regular,
     InterMedium: Inter_500Medium,
     ExoMedium: Exo2_500Medium,
+    ExoSemiBold: Exo2_600SemiBold,
   });
 
   useEffect(() => {
@@ -36,22 +37,28 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <Stack>
+      <Stack
+        screenOptions={{
+          headerTitleStyle: {
+            fontFamily: 'ExoSemiBold',
+          },
+          headerTintColor: colors.text[mode],
+          headerStyle: {
+            backgroundColor: colors.background[mode],
+          },
+        }}>
         <Stack.Screen
           name="index"
           options={{
-            headerTitle: 'LazorConnect',
+            title: 'LazorConnect',
             headerTitleStyle: {
               fontFamily: 'Orbitron',
               color: colors.primary[mode],
             },
-            headerStyle: {
-              backgroundColor: colors.background[mode],
-            },
             headerShadowVisible: false,
           }}
         />
-        <Stack.Screen name="contact/create" options={{ title: 'Create contact' }} />
+        <Stack.Screen name="contact/create" options={{ title: 'New contact' }} />
         <Stack.Screen name="contact/[id]" options={{ title: 'Chat Assistant' }} />
       </Stack>
     </ThemeProvider>

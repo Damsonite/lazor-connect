@@ -1,81 +1,63 @@
-import React, { useEffect, useState } from 'react';
+import { LucideIcon } from 'lucide-react-native';
+import React, { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 interface FormFieldProps {
   label: string;
+  icon?: LucideIcon;
   value: string;
   onChangeText: (text: string) => void;
-  placeholder?: string;
-  required?: boolean;
+  onBlur?: () => void;
+  error?: string;
   multiline?: boolean;
   numberOfLines?: number;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'url';
-  onBlur?: () => void;
-  onValidationChange?: (isValid: boolean) => void;
-  validateOnSubmit?: boolean;
 }
 
 const FormField: React.FC<FormFieldProps> = ({
   label,
+  icon,
   value,
   onChangeText,
-  placeholder,
-  required = false,
+  onBlur,
+  error,
   multiline = false,
   numberOfLines = 1,
   keyboardType = 'default',
-  onBlur,
-  onValidationChange,
-  validateOnSubmit = false,
 }) => {
-  const [error, setError] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
-  // Effect to handle validateOnSubmit prop change
-  useEffect(() => {
-    if (validateOnSubmit) {
-      validate();
-    }
-  }, [validateOnSubmit]);
-
-  const validate = () => {
-    // Call external onBlur if provided
-    if (onBlur) onBlur();
-
-    // Only validate required fields
-    if (required && !value) {
-      setError(`${label} is required`);
-      if (onValidationChange) onValidationChange(false);
-      return false;
-    }
-
-    // Field is valid
-    setError(null);
-    if (onValidationChange) onValidationChange(true);
-    return true;
+  const getBorderClass = () => {
+    if (error) return 'border-danger';
+    if (isFocused) return 'border-primary';
+    return 'border-gray-400';
   };
 
   return (
-    <View className="mb-4">
-      <Text className="mb-1 text-lg font-medium">
-        {label} {required && <Text className="text-red-500">*</Text>}
-      </Text>
-      <TextInput
-        className={`mb-2 rounded-md border p-3 ${error ? 'border-red-500' : 'border-gray-400'}`}
-        placeholder={placeholder || `Enter ${label.toLowerCase()}`}
-        value={value}
-        onChangeText={(text) => {
-          onChangeText(text);
-          if (error && text) {
-            setError(null);
-            if (onValidationChange) onValidationChange(true);
-          }
-        }}
-        onBlur={validate}
-        multiline={multiline}
-        numberOfLines={multiline ? numberOfLines : 1}
-        keyboardType={keyboardType}
-      />
-      {error && <Text className="text-sm text-red-500">{error}</Text>}
+    <View className="mb-4 flex-row">
+      {icon && (
+        <View className="size-14 items-center justify-center">{React.createElement(icon)}</View>
+      )}
+
+      <View className="flex-1">
+        <TextInput
+          className={`mb-2 h-14 w-full rounded-lg border-2 px-3 font-itmedium tracking-wider ${getBorderClass()}`}
+          placeholder={label}
+          value={value}
+          onFocus={() => setIsFocused(true)}
+          onChangeText={(text) => {
+            onChangeText(text);
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            if (onBlur) onBlur();
+          }}
+          multiline={multiline}
+          numberOfLines={multiline ? numberOfLines : 1}
+          keyboardType={keyboardType}
+        />
+        {error && <Text className="ml-1 font-itregular text-sm text-danger">{error}</Text>}
+      </View>
     </View>
   );
 };

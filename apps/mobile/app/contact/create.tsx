@@ -1,6 +1,9 @@
 import { router } from 'expo-router';
+import { Formik } from 'formik';
+import { Tag, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
+import * as Yup from 'yup';
 
 import SaveBtn from '~/components/contacts/SaveBtn';
 import Container from '~/components/shared/Container';
@@ -8,43 +11,30 @@ import FormField from '~/components/shared/FormField';
 import Loading from '~/components/shared/Loading';
 import { createContact } from '~/services/contactService';
 
+const ContactSchema = Yup.object().shape({
+  name: Yup.string().required('Name is required'),
+  nickname: Yup.string().optional(),
+});
+
 const ContactCreate: React.FC = () => {
-  const [name, setName] = useState('');
-  const [isNameValid, setIsNameValid] = useState(true);
-  const [personality, setPersonality] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [shouldValidate, setShouldValidate] = useState(false);
 
-  const handleSubmit = async () => {
-    setShouldValidate(true);
-
-    // Check if required field is filled
-    if (!name || !isNameValid) {
-      return;
-    }
-
+  const handleSubmit = async (values: { name: string; nickname: string }) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Include personality if provided
-      await createContact({
-        name,
-        ...(personality ? { personality } : {}),
-      });
+      const contactData = {
+        name: values.name,
+        ...(values.nickname ? { nickname: values.nickname } : {}),
+      };
 
-      // Reset form and validation state
-      setName('');
-      setPersonality('');
-      setShouldValidate(false);
-
-      // Navigate back to contact list
+      await createContact(contactData);
       router.back();
     } catch (err) {
       console.error('Failed to create contact:', err);
       setError('Failed to create contact. Please try again.');
-      setShouldValidate(false);
     } finally {
       setIsLoading(false);
     }
@@ -52,30 +42,46 @@ const ContactCreate: React.FC = () => {
 
   return (
     <Container>
-      <ScrollView style={{ flex: 1, width: '100%' }}>
-        <FormField
-          label="Name"
-          required
-          value={name}
-          onChangeText={setName}
-          placeholder="Enter name"
-          onValidationChange={setIsNameValid}
-          validateOnSubmit={shouldValidate}
-        />
+      <Formik
+        initialValues={{ name: '', nickname: '' }}
+        validationSchema={ContactSchema}
+        onSubmit={handleSubmit}>
+        {({
+          handleChange,
+          handleSubmit,
+          values,
+          errors,
+          touched,
+          setFieldTouched,
+          isValid,
+          dirty,
+        }) => (
+          <>
+            <ScrollView>
+              <FormField
+                label="Name"
+                icon={User}
+                value={values.name}
+                onChangeText={handleChange('name')}
+                onBlur={() => setFieldTouched('name')}
+                error={touched.name ? errors.name : undefined}
+              />
 
-        <FormField
-          label="Personality"
-          value={personality}
-          onChangeText={setPersonality}
-          placeholder="Describe personality traits, emotional characteristics, and behaviors"
-          multiline
-          numberOfLines={5}
-        />
+              <FormField
+                label="Nickname"
+                icon={Tag}
+                value={values.nickname}
+                onChangeText={handleChange('nickname')}
+                onBlur={() => setFieldTouched('nickname')}
+              />
 
-        <Loading loading={isLoading} error={error} />
-      </ScrollView>
+              <Loading loading={isLoading} error={error} />
+            </ScrollView>
 
-      {!isLoading && <SaveBtn onPress={handleSubmit} />}
+            <SaveBtn onPress={handleSubmit} disabled={isLoading || !isValid || !dirty} />
+          </>
+        )}
+      </Formik>
     </Container>
   );
 };

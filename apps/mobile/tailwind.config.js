@@ -19,6 +19,7 @@ module.exports = {
         itregular: ['InterRegular', 'sans-serif'],
         itmedium: ['InterMedium', 'sans-serif'],
         exmedium: ['ExoMedium', 'sans-serif'],
+        exsemibold: ['ExoSemiBold', 'sans-serif'],
       },
     },
   },

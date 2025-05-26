@@ -1,15 +1,21 @@
 import { Save } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import BaseBtn from '~/components/shared/BaseBtn';
+import { colors } from '~/utils/colors';
 
 interface SaveBtnProps {
   onPress: () => void;
+  disabled?: boolean;
 }
 
-export default function SaveBtn({ onPress }: SaveBtnProps) {
+export default function SaveBtn({ onPress, disabled }: SaveBtnProps) {
+  const { colorScheme } = useColorScheme();
+  const mode = colorScheme ?? 'light';
+
   return (
-    <BaseBtn className="absolute bottom-0 right-0 h-20 w-20 rounded-3xl" onPress={onPress}>
-      <Save size={32} color="white" />
+    <BaseBtn onPress={onPress} isAction disabled={disabled} className="p-4" color="primary">
+      <Save size={32} color={colors.background[mode]} />
     </BaseBtn>
   );
 }
