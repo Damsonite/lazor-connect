@@ -13,7 +13,10 @@ export default function ContactItem({ contact }: { contact: Contact }) {
   const mode = colorScheme ?? 'light';
 
   const handlePress = () => {
-    router.push({ pathname: '/contact/[id]', params: { id: String(contact.id) } });
+    router.push({
+      pathname: '/contact/[id]',
+      params: { id: String(contact.id), name: contact.name },
+    });
   };
 
   return (
@@ -26,7 +29,7 @@ export default function ContactItem({ contact }: { contact: Contact }) {
         <User size={32} color={withOpacity('text', 0.75, mode)} />
       </View>
 
-      <Text className="text-text font-exmedium flex-1 text-lg">{contact.name}</Text>
+      <Text className="flex-1 font-exmedium text-lg text-text">{contact.name}</Text>
 
       <View className="h-full justify-center">
         <Text className="font-itregular text-sm" style={{ color: withOpacity('text', 0.5, mode) }}>

@@ -2,7 +2,7 @@ interface ContactBase {
   // Basic contact information
   name: string;
   nickname?: string;
-  birthday?: string;
+  birthday?: Date;
   contact_methods?: {
     type: string; // e.g., 'presential', 'phone', 'social_media'
     value: string; // e.g., 'cinema', '123-456-7890', '@username'

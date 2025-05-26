@@ -59,7 +59,13 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen name="contact/create" options={{ title: 'New contact' }} />
-        <Stack.Screen name="contact/[id]" options={{ title: 'Chat Assistant' }} />
+        <Stack.Screen
+          name="contact/[id]"
+          options={({ route }) => {
+            const { name } = route.params as { name: string };
+            return { title: `${name}` };
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );

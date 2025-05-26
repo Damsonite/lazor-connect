@@ -2,7 +2,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 interface LoadingIndicatorProps {
   loading: boolean;
-  error: string | null;
+  error?: string | undefined;
 }
 
 export default function Loading({ loading, error }: LoadingIndicatorProps) {

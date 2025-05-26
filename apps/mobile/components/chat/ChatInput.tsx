@@ -1,5 +1,11 @@
 import { Send } from 'lucide-react-native';
-import { KeyboardAvoidingView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 
 interface ChatInputProps {
   inputMessage: string;
@@ -15,7 +21,9 @@ export default function ChatInput({
   sendingMessage,
 }: ChatInputProps) {
   return (
-    <KeyboardAvoidingView style={styles.inputContainer}>
+    <KeyboardAvoidingView
+      className="mb-8 flex-row bg-background p-6 pt-2"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TextInput
         style={styles.input}
         value={inputMessage}
@@ -34,15 +42,6 @@ export default function ChatInput({
 }
 
 const styles = StyleSheet.create({
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
   input: {
     flex: 1,
     borderWidth: 1,

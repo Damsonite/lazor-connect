@@ -1,7 +1,8 @@
 import { FlashList, ListRenderItem } from '@shopify/flash-list';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import Empty from '~/components/shared/Empty';
 import LoadingIndicator from '~/components/shared/Loading';
 
 interface ListProps<T> {
@@ -17,13 +18,13 @@ export default function BaseList<T>({
 }: ListProps<T>) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState<boolean>(!!fetchData);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   const loadData = async () => {
     if (!fetchData) return;
 
     setLoading(true);
-    setError(null);
+    setError(undefined);
 
     try {
       const result = await fetchData();
@@ -40,12 +41,6 @@ export default function BaseList<T>({
     loadData();
   }, [fetchData]);
 
-  const EmptyComponent = () => (
-    <View className="flex-1 items-center justify-center p-4">
-      <Text className="text-center text-gray-500">{emptyMessage}</Text>
-    </View>
-  );
-
   return (
     <View className="bg-backround flex-1">
       <LoadingIndicator loading={loading} error={error} />
@@ -56,7 +51,7 @@ export default function BaseList<T>({
           estimatedItemSize={80}
           onRefresh={loadData}
           refreshing={loading}
-          ListEmptyComponent={EmptyComponent}
+          ListEmptyComponent={Empty}
         />
       )}
     </View>

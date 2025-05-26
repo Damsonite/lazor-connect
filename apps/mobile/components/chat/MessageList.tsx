@@ -7,17 +7,28 @@ import { Message } from '~/types/chat';
 interface MessageListProps {
   messages: Message[];
   flatListRef: RefObject<FlashList<Message> | null>;
+  contactId: string;
 }
-
-export default function MessageList({ messages, flatListRef }: MessageListProps) {
+export default function MessageList({ messages, flatListRef, contactId }: MessageListProps) {
   return (
     <FlashList
       ref={flatListRef}
       data={messages}
-      renderItem={({ item }) => <MessageBubble message={item} />}
+      renderItem={({ item }) => <MessageBubble message={item} contactId={contactId} />}
       estimatedItemSize={50}
       contentContainerStyle={{ padding: 16, paddingBottom: 0 }}
-      onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+      onContentSizeChange={() => {
+        // Safe scroll to bottom with additional checks
+        if (flatListRef.current && messages.length > 0) {
+          try {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+          } catch (error) {
+            console.log('Error scrolling to end:', error);
+          }
+        }
+      }}
       showsVerticalScrollIndicator={false}
     />
   );

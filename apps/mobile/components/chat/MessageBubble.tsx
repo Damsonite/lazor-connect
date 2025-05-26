@@ -1,5 +1,6 @@
-import { User } from 'lucide-react-native';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Bot } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
+import { Alert, Text, View } from 'react-native';
 import {
   GestureHandlerRootView,
   LongPressGestureHandler,
@@ -8,6 +9,8 @@ import {
 
 import { submitFeedback } from '~/services/feedbackService';
 import { Message } from '~/types/chat';
+import { colors, withOpacity } from '~/utils/colors';
+import { formatChatTimestamp } from '~/utils/date';
 
 export interface MessageBubbleProps {
   message: Message;
@@ -15,6 +18,9 @@ export interface MessageBubbleProps {
 }
 
 export default function MessageBubble({ message, contactId }: MessageBubbleProps) {
+  const { colorScheme } = useColorScheme();
+  const mode = colorScheme ?? 'light';
+
   const handleLongPress = () => {
     if (!message.isUser) {
       Alert.alert(
@@ -60,27 +66,22 @@ export default function MessageBubble({ message, contactId }: MessageBubbleProps
         }}
         minDurationMs={800}>
         <View
-          style={[
-            styles.messageBubble,
-            message.isUser ? styles.userMessageBubble : styles.aiMessageBubble,
-          ]}>
+          className={`mb-4 max-w-[80%] flex-row items-end ${message.isUser ? 'self-end' : 'self-start'}`}>
           {!message.isUser && (
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <User size={16} color="#fff" />
-              </View>
+            <View className="mr-2">
+              <Bot size={24} color={colors.primary[mode]} />
             </View>
           )}
           <View
-            style={[
-              styles.messageContent,
-              message.isUser ? styles.userMessageContent : styles.aiMessageContent,
-            ]}>
-            <Text style={[styles.messageText, !message.isUser && styles.aiMessageText]}>
-              {message.text}
-            </Text>
-            <Text style={styles.timestamp}>
-              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            style={{
+              backgroundColor: message.isUser ? withOpacity('primary', 0.4, mode) : 'white',
+            }}
+            className="relative rounded-2xl border border-gray-200 p-4 pb-6">
+            <Text className="font-itregular text-lg text-text">{message.text}</Text>
+            <Text
+              className="absolute bottom-2 right-3 font-itregular text-sm"
+              style={{ color: withOpacity('text', 0.5, mode) }}>
+              {formatChatTimestamp(message.timestamp)}
             </Text>
           </View>
         </View>
@@ -88,55 +89,3 @@ export default function MessageBubble({ message, contactId }: MessageBubbleProps
     </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  messageBubble: {
-    marginBottom: 16,
-    maxWidth: '80%',
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  userMessageBubble: {
-    alignSelf: 'flex-end',
-  },
-  aiMessageBubble: {
-    alignSelf: 'flex-start',
-  },
-  avatarContainer: {
-    marginRight: 8,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#6366f1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageContent: {
-    borderRadius: 16,
-    padding: 12,
-    paddingBottom: 24,
-    position: 'relative',
-  },
-  userMessageContent: {
-    backgroundColor: '#6366f1',
-  },
-  aiMessageContent: {
-    backgroundColor: '#fff',
-  },
-  messageText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  aiMessageText: {
-    color: '#222',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#222',
-    position: 'absolute',
-    right: 12,
-    bottom: 6,
-  },
-});
