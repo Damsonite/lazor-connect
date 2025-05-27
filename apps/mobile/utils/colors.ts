@@ -2,31 +2,31 @@ import { vars } from 'nativewind';
 
 const colors = {
   primary: {
-    light: '#7C3AED', // Púrpura intenso y moderno (vínculo, creatividad)
-    dark: '#C084FC', // Lavanda brillante (curioso y accesible)
+    light: '#7C3AED',
+    dark: '#C084FC',
   },
   secondary: {
-    light: '#06B6D4', // Cian vibrante (fluidez, conexión)
+    light: '#06B6D4',
     dark: '#22D3EE',
   },
   accent: {
-    light: '#F97316', // Naranja coral (energía, impulso)
+    light: '#F97316',
     dark: '#FB923C',
   },
   text: {
-    light: '#0F172A', // Muy oscuro pero con un tinte azul (tech)
-    dark: '#F8FAFC', // Blanco azulado
+    light: '#0F172A',
+    dark: '#F8FAFC',
   },
   background: {
-    light: '#F1F5F9', // Gris azulado claro (neutro pero con vida)
-    dark: '#0F172A', // Azul casi negro (profundidad)
+    light: '#F1F5F9',
+    dark: '#0F172A',
   },
   confirm: {
-    light: '#22C55E', // Verde más brillante (acción, éxito)
+    light: '#22C55E',
     dark: '#4ADE80',
   },
   danger: {
-    light: '#EF4444', // Rojo intenso pero moderno
+    light: '#EF4444',
     dark: '#F87171',
   },
 };

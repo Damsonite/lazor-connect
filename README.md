@@ -1,6 +1,12 @@
-# 🫂 Lazor Connect
+<div align="center">
 
-> A full-stack application combining a **FastAPI** backend with a **React Native (Expo)** mobile app. Its goal is to promote meaningful human connections through AI-powered conversation guidance, relationship tracking, and personalized interaction suggestions.
+<h1 style="color: #7C3AED;">Lazor Connect</h1>
+
+<img src="apps/mobile/assets/adaptive-icon.png" alt="Lazor Connect Logo" width="120" height="120"/>
+
+> A full-stack application combining a FastAPI backend with a React Native (Expo) mobile app. Its goal is to promote meaningful human connections through AI-powered conversation guidance, relationship tracking, and personalized interaction suggestions.
+
+</div>
 
 ## 🌟 Project Vision
 
@@ -26,7 +32,7 @@ Lazor Connect is designed to help people build and maintain more meaningful rela
 ## 🛠️ Technologies
 
 - **Backend**: FastAPI, Pydantic, Uvicorn, Google Gemini AI
-- **Mobile**: React Native (Expo), Zustand, Expo Router, NativeWind (TailwindCSS)
+- **Mobile**: React, React Native, Expo, Zustand, Expo Router, NativeWind (TailwindCSS)
 - **Database & Auth**: Supabase
 
 ## 📋 Contact Model
@@ -158,17 +164,18 @@ supabase_key = os.getenv("SUPABASE_KEY");
 
 ## 🎯 Roadmap
 
-### 🔹 v1.0.0
+### Current Development Focus
 
-- Functional mobile-backend connection
-- Contact CRUD
-- Shared state using Zustand
-- Styling with NativeWind
-- Functional monorepo
+- **Relationship Streak Tracking**: Gamified approach to maintain regular contact with important people
+- **Smart Contact Recommendations**: AI-powered suggestions for who to reach out to based on relationship patterns
+- **Interactive Reminder System**: Contextual reminders with conversation starters
+- **Emotion Analysis**: Better understanding of relationship dynamics through sentiment analysis
+- **Offline Support**: Core functionality available without internet connection
+- **Cross-platform Enhancements**: Improved experience across various devices
 
 ## 🐛 Bugs & Feedback
 
-If you find any issues or have suggestions, **open an Issue** on [GitHub Issues](https://github.com/your_username/repo/issues).
+If you find any issues or have suggestions, **open an Issue** on [GitHub Issues](https://github.com/lazor-connect/issues).
 
 ## 💖 Contributing
 
