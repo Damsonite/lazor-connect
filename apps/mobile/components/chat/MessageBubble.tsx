@@ -74,9 +74,14 @@ export default function MessageBubble({ message, contactId }: MessageBubbleProps
           )}
           <View
             style={{
-              backgroundColor: message.isUser ? withOpacity('primary', 0.4, mode) : 'white',
+              backgroundColor: message.isUser
+                ? withOpacity('primary', 0.4, mode)
+                : withOpacity('primary', 0.1, mode),
+              borderColor: message.isUser
+                ? withOpacity('primary', 0.6, mode)
+                : withOpacity('primary', 0.2, mode),
             }}
-            className="relative rounded-2xl border border-gray-200 p-4 pb-6">
+            className="relative rounded-2xl border p-4 pb-6">
             <Text className="font-itregular text-lg text-text">{message.text}</Text>
             <Text
               className="absolute bottom-2 right-3 font-itregular text-sm"

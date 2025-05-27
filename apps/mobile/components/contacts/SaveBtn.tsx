@@ -14,7 +14,7 @@ export default function SaveBtn({ onPress, disabled }: SaveBtnProps) {
   const mode = colorScheme ?? 'light';
 
   return (
-    <BaseBtn onPress={onPress} isAction disabled={disabled} className="p-4" color="primary">
+    <BaseBtn onPress={onPress} disabled={disabled} color="confirm">
       <Save size={32} color={colors.background[mode]} />
     </BaseBtn>
   );

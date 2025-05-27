@@ -8,24 +8,19 @@ type ButtonProps = {
   title?: string;
   children?: React.ReactNode;
   color?: Color;
-  isAction?: boolean;
   disabled?: boolean;
 } & TouchableOpacityProps;
 
 const Button = forwardRef<View, ButtonProps>(
-  (
-    { title, children, color = 'primary', isAction = false, disabled = false, ...touchableProps },
-    ref
-  ) => {
+  ({ title, children, color = 'primary', disabled = false, ...touchableProps }, ref) => {
     const { colorScheme } = useColorScheme();
     const mode = colorScheme ?? 'light';
-    const actionClassname = isAction ? 'absolute bottom-12 right-4 size-20' : '';
 
     return (
       <TouchableOpacity
         ref={ref}
         {...touchableProps}
-        className={`items-center justify-center rounded-3xl bg-primary p-4 shadow-md ${touchableProps.className} ${actionClassname}}`}
+        className={`size-16 items-center justify-center rounded-3xl bg-primary shadow-md ${touchableProps.className}`}
         style={{ backgroundColor: disabled ? withOpacity('text', 0.2, mode) : colors[color][mode] }}
         disabled={disabled}>
         {title && (

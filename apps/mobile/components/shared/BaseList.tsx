@@ -42,7 +42,7 @@ export default function BaseList<T>({
   }, [fetchData]);
 
   return (
-    <View className="bg-backround flex-1">
+    <View className="flex-1 ">
       <LoadingIndicator loading={loading} error={error} />
       {!loading && !error && (
         <FlashList
@@ -51,7 +51,7 @@ export default function BaseList<T>({
           estimatedItemSize={80}
           onRefresh={loadData}
           refreshing={loading}
-          ListEmptyComponent={Empty}
+          ListEmptyComponent={() => <Empty message={emptyMessage} />}
         />
       )}
     </View>

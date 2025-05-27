@@ -2,8 +2,10 @@ import { router } from 'expo-router';
 import { Formik } from 'formik';
 import { Tag, User } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import * as Yup from 'yup';
+
+import KeyboardAvoid from '~/components/shared/KeyboardAvoid';
 
 import SaveBtn from '~/components/contacts/SaveBtn';
 import Container from '~/components/shared/Container';
@@ -56,8 +58,8 @@ const ContactCreate: React.FC = () => {
           isValid,
           dirty,
         }) => (
-          <>
-            <ScrollView>
+          <KeyboardAvoid>
+            <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
               <FormField
                 label="Name"
                 icon={User}
@@ -75,11 +77,13 @@ const ContactCreate: React.FC = () => {
                 onBlur={() => setFieldTouched('nickname')}
               />
 
-              <Loading loading={isLoading} error={error} />
+              <Loading loading={isLoading} error={error ?? undefined} />
             </ScrollView>
 
-            <SaveBtn onPress={handleSubmit} disabled={isLoading || !isValid || !dirty} />
-          </>
+            <View className="actions">
+              <SaveBtn onPress={handleSubmit} disabled={isLoading || !isValid || !dirty} />
+            </View>
+          </KeyboardAvoid>
         )}
       </Formik>
     </Container>

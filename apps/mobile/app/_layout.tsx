@@ -46,6 +46,10 @@ export default function RootLayout() {
           headerStyle: {
             backgroundColor: colors.background[mode],
           },
+          contentStyle: {
+            backgroundColor: colors.background[mode],
+          },
+          presentation: 'transparentModal',
         }}>
         <Stack.Screen
           name="index"

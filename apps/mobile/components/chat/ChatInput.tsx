@@ -1,11 +1,8 @@
 import { Send } from 'lucide-react-native';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-} from 'react-native';
+import { useColorScheme } from 'nativewind';
+import { TextInput, TouchableOpacity, View } from 'react-native';
+
+import { colors, withOpacity } from '~/utils/colors';
 
 interface ChatInputProps {
   inputMessage: string;
@@ -20,48 +17,35 @@ export default function ChatInput({
   handleSendMessage,
   sendingMessage,
 }: ChatInputProps) {
+  const { colorScheme } = useColorScheme();
+  const mode = colorScheme ?? 'light';
+
   return (
-    <KeyboardAvoidingView
-      className="mb-8 flex-row bg-background p-6 pt-2"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View className="mb-12 flex-row p-6 pt-2">
       <TextInput
-        style={styles.input}
+        style={{
+          color: colors.text[mode],
+          backgroundColor: withOpacity('primary', 0.1, mode),
+          borderColor: withOpacity('primary', 0.2, mode),
+        }}
+        className="mr-3 max-h-32 flex-1 rounded-3xl border p-4 font-itregular tracking-wider"
         value={inputMessage}
         onChangeText={setInputMessage}
         placeholder="Type a message..."
+        placeholderTextColor={withOpacity('text', 0.5, mode)}
         multiline
       />
       <TouchableOpacity
-        style={[styles.sendButton, !inputMessage.trim() && styles.sendButtonDisabled]}
+        style={{
+          backgroundColor: !inputMessage.trim()
+            ? withOpacity('text', 0.2, mode)
+            : colors.primary[mode],
+        }}
+        className="size-14 items-center justify-center rounded-full"
         onPress={handleSendMessage}
         disabled={!inputMessage.trim() || sendingMessage}>
-        <Send size={20} color={inputMessage.trim() ? '#fff' : '#aaa'} />
+        <Send size={20} color={colors.background[mode]} />
       </TouchableOpacity>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 24,
-    padding: 12,
-    paddingTop: 12,
-    maxHeight: 120,
-    marginRight: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#6366f1',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#e0e0e0',
-  },
-});

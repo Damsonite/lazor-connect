@@ -1,18 +1,18 @@
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams } from 'expo-router';
 import { useRef } from 'react';
-import { View } from 'react-native';
 
 import ChatInput from '~/components/chat/ChatInput';
 import ContactHeader from '~/components/chat/ContactHeader';
 import MessageList from '~/components/chat/MessageList';
 import TypingIndicator from '~/components/chat/TypingIndicator';
 import Empty from '~/components/shared/Empty';
+import KeyboardAvoid from '~/components/shared/KeyboardAvoid';
 import Loading from '~/components/shared/Loading';
 import { useChat } from '~/hooks/useChat';
 import { Message } from '~/types/chat';
 
-const ContactDetails = () => {
+export default function ContactDetails() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const flatListRef = useRef<FlashList<Message> | null>(null);
 
@@ -32,7 +32,7 @@ const ContactDetails = () => {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <KeyboardAvoid className="flex-1 bg-background">
       <ContactHeader contact={contact} />
       <MessageList messages={messages} flatListRef={flatListRef} contactId={id as string} />
 
@@ -45,8 +45,6 @@ const ContactDetails = () => {
         handleSendMessage={handleSendMessage}
         sendingMessage={sendingMessage}
       />
-    </View>
+    </KeyboardAvoid>
   );
-};
-
-export default ContactDetails;
+}
