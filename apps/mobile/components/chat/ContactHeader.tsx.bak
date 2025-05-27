@@ -1,0 +1,78 @@
+import { useColorScheme } from 'nativewind';
+import { useState } from 'react';
+import { Text, View } from 'react-native';
+
+import ContactDetailField from '~/components/chat/ContactDetailField';
+import { Contact } from '~/types/contact';
+import { withOpacity } from '~/utils/colors';
+
+export default function ContactHeader({ contact }: { contact: Contact }) {
+  const [expanded, setExpanded] = useState(false);
+  const { colorScheme } = useColorScheme();
+  const mode = colorScheme ?? 'light';  // Helper function to render a detail field when a value exists
+  const renderDetailField = (
+    value: string | string[] | Date | undefined,
+    label: string,
+    inline = true,
+    formatter?: (val: any) => string
+  ) => {
+    if (!value) return null;
+    
+    if (Array.isArray(value) && value.length === 0) return null;
+    
+    return (
+      <ContactDetailField label={label} inline={inline}>
+        {Array.isArray(value) ? (
+          <Text className="text-md text-slate-800">{value.join(', ')}</Text>
+        ) : formatter ? (
+          formatter(value)
+        ) : (
+          String(value)
+        )}
+      </ContactDetailField>
+    );
+  };
+
+  // Helper function to format date strings
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  return (
+    <View
+      className="border-b p-4"
+      style={{
+        backgroundColor: withOpacity('primary', 0.05, mode),
+        borderColor: withOpacity('primary', 0.1, mode),
+      }}>
+      <View className="flex-row items-center justify-between">
+        <View>
+          {contact.nickname && <Text className="mb-2 text-lg italic">"{contact.nickname}"</Text>}
+        </View>
+        <Text
+          className="px-2 py-1 text-base text-blue-500"
+          onPress={() => setExpanded((prev) => !prev)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </Text>
+      </View>
+
+      {expanded && (
+        <View className="mt-2 flex-col gap-2">
+          {renderDetailField(contact.birthday, 'Birthday', true, formatDate)}
+          {renderDetailField(contact.relationship_type, 'Relationship')}
+          {renderDetailField(
+            contact.relationship_strength?.toString(),
+            'Connection strength',
+            true,
+            (val) => `${val}/5`
+          )}
+          {renderDetailField(contact.interests, 'Interests', false)}
+          {renderDetailField(contact.conversation_topics, 'Previous conversation topics', false)}
+          {renderDetailField(contact.last_connection, 'Last contact', true, formatDate)}
+          {renderDetailField(contact.family_details, 'Family details', false)}
+          {renderDetailField(contact.personality, 'Personality', false)}
+        </View>
+      )}
+    </View>
+  );
+}

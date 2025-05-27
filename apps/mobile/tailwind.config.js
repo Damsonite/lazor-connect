@@ -4,7 +4,24 @@ module.exports = {
 
   presets: [require('nativewind/preset')],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: 'var(--color-primary)',
+        secondary: 'var(--color-secondary)',
+        accent: 'var(--color-accent)',
+        text: 'var(--color-text)',
+        background: 'var(--color-background)',
+        confirm: 'var(--color-confirm)',
+        danger: 'var(--color-danger)',
+      },
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+        itregular: ['InterRegular', 'sans-serif'],
+        itmedium: ['InterMedium', 'sans-serif'],
+        exmedium: ['ExoMedium', 'sans-serif'],
+        exsemibold: ['ExoSemiBold', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };
