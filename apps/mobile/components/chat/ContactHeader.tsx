@@ -1,7 +1,7 @@
 import { Flame } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Dimensions, ScrollView, Text, View } from 'react-native';
 
 import ContactDetail from '~/components/chat/ContactDetail';
 import { Contact } from '~/types/contact';
@@ -10,8 +10,17 @@ import { formatBirthday, formatRelativeTime } from '~/utils/date';
 
 export default function ContactHeader({ contact }: { contact: Contact }) {
   const [expanded, setExpanded] = useState(false);
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
   const { colorScheme } = useColorScheme();
   const mode = colorScheme ?? 'light';
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   const formatRelationshipStrength = (value: number | null) => {
     if (value === null) return 'Not set';
@@ -37,9 +46,11 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
     setExpanded((prev) => !prev);
   };
 
+  const isDesktop = dimensions.width >= 768;
+
   return (
     <View
-      className="max-h-[40%] border-b p-4"
+      className={`border-b p-4 ${isDesktop ? 'h-auto min-h-16' : expanded ? 'max-h-[50%]' : 'h-auto'}`}
       style={{
         backgroundColor: withOpacity('primary', 0.05, mode),
         borderColor: withOpacity('primary', 0.1, mode),
@@ -51,14 +62,16 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
         </View>
 
         {hasDetails && (
-          <Text className="px-2 py-1 font-itmedium text-primary" onPress={toggleExpanded}>
+          <Text
+            className={`px-2 py-1 font-exmedium text-primary ${isDesktop ? 'text-base' : ''}`}
+            onPress={toggleExpanded}>
             {expanded ? 'Show less' : 'Show more'}
           </Text>
         )}
       </View>
 
       {expanded && (
-        <ScrollView className="mt-2 flex-col gap-2">
+        <ScrollView className="mt-2 flex-col gap-2" showsVerticalScrollIndicator={false}>
           <ContactDetail label="Nickname" value={contact.nickname} />
           <ContactDetail
             label="Last contact"

@@ -12,11 +12,12 @@ interface MessageListProps {
 export default function MessageList({ messages, flatListRef, contactId }: MessageListProps) {
   return (
     <FlashList
+      className="flex-1"
       ref={flatListRef}
       data={messages}
       renderItem={({ item }) => <MessageBubble message={item} contactId={contactId} />}
       estimatedItemSize={50}
-      contentContainerStyle={{ padding: 16, paddingBottom: 0 }}
+      contentContainerStyle={{ padding: 16 }}
       onContentSizeChange={() => {
         // Safe scroll to bottom with additional checks
         if (flatListRef.current && messages.length > 0) {

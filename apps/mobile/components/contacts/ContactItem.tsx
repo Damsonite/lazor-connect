@@ -48,7 +48,6 @@ export default function ContactItem({ contact, isSidebar = false }: ContactItemP
         <Text className={`font-exmedium text-text ${isSidebar ? 'text-base' : 'text-lg'}`}>
           {contact.name}
         </Text>
-
         <View className="mt-1 flex-row items-center gap-1 font-exsemibold">
           <Flame size={16} color={streakColor} />
           <Text

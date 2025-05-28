@@ -1,6 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams } from 'expo-router';
 import { useRef } from 'react';
+import { View } from 'react-native';
 
 import ChatInput from '~/components/chat/ChatInput';
 import ContactHeader from '~/components/chat/ContactHeader';
@@ -32,19 +33,30 @@ export default function ContactDetails() {
   }
 
   return (
-    <KeyboardAvoid className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <ContactHeader contact={contact} />
-      <MessageList messages={messages} flatListRef={flatListRef} contactId={id as string} />
 
-      <Loading loading={loading} />
+      <KeyboardAvoid className="flex-1">
+        {/* Chat area that takes all available space */}
+        <View className="flex-1">
+          {loading ? (
+            <Loading loading={loading} />
+          ) : (
+            <MessageList messages={messages} flatListRef={flatListRef} contactId={id as string} />
+          )}
+        </View>
 
-      <TypingIndicator typingIndicator={typingIndicator} />
-      <ChatInput
-        inputMessage={inputMessage}
-        setInputMessage={setInputMessage}
-        handleSendMessage={handleSendMessage}
-        sendingMessage={sendingMessage}
-      />
-    </KeyboardAvoid>
+        {/* Bottom area with typing indicator and input */}
+        <View className="bg-background">
+          <TypingIndicator typingIndicator={typingIndicator} />
+          <ChatInput
+            inputMessage={inputMessage}
+            setInputMessage={setInputMessage}
+            handleSendMessage={handleSendMessage}
+            sendingMessage={sendingMessage}
+          />
+        </View>
+      </KeyboardAvoid>
+    </View>
   );
 }

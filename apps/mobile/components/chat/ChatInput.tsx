@@ -21,9 +21,9 @@ export default function ChatInput({
   const mode = colorScheme ?? 'light';
 
   return (
-    <View className="mb-12 flex-row p-6 pt-2">
+    <View className="flex-row p-4">
       <TextInput
-        className="border-gray mr-3 max-h-32 flex-1 rounded-3xl border bg-secondary p-4 font-itregular tracking-wider text-text"
+        className="mr-3 h-12 flex-1 rounded-3xl border border-gray bg-secondary p-4 font-itregular tracking-wider text-text"
         value={inputMessage}
         onChangeText={setInputMessage}
         placeholder="Type a message..."
@@ -31,7 +31,7 @@ export default function ChatInput({
         multiline
       />
       <TouchableOpacity
-        className={`border-gray size-14 items-center justify-center rounded-full border ${!inputMessage.trim() ? 'bg-gray' : 'bg-primary'}`}
+        className={`size-12 items-center justify-center rounded-full border border-gray ${!inputMessage.trim() ? 'bg-gray' : 'bg-primary'}`}
         onPress={handleSendMessage}
         disabled={!inputMessage.trim() || sendingMessage}>
         <Send size={20} color={colors.background[mode]} />
