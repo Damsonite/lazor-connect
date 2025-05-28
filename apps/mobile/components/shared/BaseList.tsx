@@ -9,12 +9,16 @@ interface ListProps<T> {
   fetchData: () => Promise<T[]>;
   renderItem: ListRenderItem<T>;
   emptyMessage?: string;
+  className?: string;
+  showVerticalScrollIndicator?: boolean;
 }
 
 export default function BaseList<T>({
   fetchData,
   renderItem,
   emptyMessage = 'No items found',
+  className,
+  showVerticalScrollIndicator = true,
 }: ListProps<T>) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState<boolean>(!!fetchData);
@@ -42,7 +46,7 @@ export default function BaseList<T>({
   }, [fetchData]);
 
   return (
-    <View className="flex-1 ">
+    <View className="flex-1">
       <LoadingIndicator loading={loading} error={error} />
       {!loading && !error && (
         <FlashList
@@ -52,6 +56,8 @@ export default function BaseList<T>({
           onRefresh={loadData}
           refreshing={loading}
           ListEmptyComponent={() => <Empty message={emptyMessage} />}
+          contentContainerClassName={className}
+          showsVerticalScrollIndicator={showVerticalScrollIndicator}
         />
       )}
     </View>

@@ -3,28 +3,41 @@ import { Flame, User } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { useSelectedContact } from '~/context/SelectedContactProvider';
 import { Contact } from '~/types/contact';
 import { colors, withOpacity } from '~/utils/colors';
 import { formatRelativeTime } from '~/utils/date';
 
-export default function ContactItem({ contact }: { contact: Contact }) {
+interface ContactItemProps {
+  contact: Contact;
+  isSidebar?: boolean;
+}
+
+export default function ContactItem({ contact, isSidebar = false }: ContactItemProps) {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const mode = colorScheme ?? 'light';
+  const { selectedContactId, setSelectedContactId } = useSelectedContact();
 
   const streakColor = contact.current_streak ? colors.accent[mode] : withOpacity('text', 0.5, mode);
+  const isSelected = selectedContactId === String(contact.id);
 
   const handlePress = () => {
+    const contactId = String(contact.id);
+    setSelectedContactId(contactId);
     router.push({
       pathname: '/contact/[id]',
-      params: { id: String(contact.id), name: contact.name },
+      params: { id: contactId, name: contact.name },
     });
   };
 
   return (
-    <TouchableOpacity onPress={handlePress} className="mb-4 flex-row items-center pr-2">
+    <TouchableOpacity
+      onPress={handlePress}
+      className="mb-4 flex-row items-center rounded-xl"
+      style={isSelected ? { backgroundColor: withOpacity('primary', 0.05, mode) } : {}}>
       <View
-        className="mr-4 h-16 w-16 items-center justify-center rounded-xl"
+        className={`mr-4 items-center justify-center rounded-xl ${isSidebar ? 'size-12' : 'size-14'}`}
         style={{
           backgroundColor: withOpacity('primary', 0.1, mode),
         }}>
@@ -32,7 +45,9 @@ export default function ContactItem({ contact }: { contact: Contact }) {
       </View>
 
       <View className="flex-1">
-        <Text className="font-exmedium text-lg text-text">{contact.name}</Text>
+        <Text className={`font-exmedium text-text ${isSidebar ? 'text-base' : 'text-lg'}`}>
+          {contact.name}
+        </Text>
 
         <View className="mt-1 flex-row items-center gap-1 font-exsemibold">
           <Flame size={16} color={streakColor} />
