@@ -26,9 +26,11 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
         borderColor: withOpacity('primary', 0.1, mode),
       }}>
       <View className="flex-row items-center justify-between">
-        <View>
+        <View className="flex-row items-center gap-2">
           <Flame size={24} color={colors.accent[mode]} />
+          <Text className="font-exsemibold text-lg text-accent">{contact.current_streak || 0}</Text>
         </View>
+
         <Text
           className="px-2 py-1 font-itmedium text-primary"
           onPress={() => setExpanded((prev) => !prev)}>
@@ -50,6 +52,16 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
             label="Connection strength"
             value={contact.relationship_strength}
             formatter={formatRelationshipStrength}
+          />
+          <ContactDetail
+            label="Current streak"
+            value={contact.current_streak}
+            formatter={(value: number) => (value ? `${value} days` : 'No streak')}
+          />
+          <ContactDetail
+            label="Best streak"
+            value={contact.longest_streak}
+            formatter={(value: number) => (value ? `${value} days` : 'No streak yet')}
           />
           <ContactDetail label="Interests" value={contact.interests} inline={false} />
           <ContactDetail

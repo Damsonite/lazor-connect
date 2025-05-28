@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from models import ContactCreate, ContactUpdate
 from services.contactService import ContactService
+from services.streakService import StreakService
 
 router = APIRouter(
     prefix="/contacts",
@@ -14,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=dict)  # Change to dict until we fix the model structure
+@router.post("", response_model=dict)
 def create_contact(contact: ContactCreate):
     """Create a new contact"""
     return ContactService.create_contact(contact.model_dump(mode="json"))
@@ -131,3 +132,49 @@ def delete_contact(contact_id: str = Path(..., title="The ID of the contact to d
         raise HTTPException(status_code=404, detail="Contact not found")
     
     return {"message": "Contact successfully deleted"}
+
+@router.post("/{contact_id}/contact", response_model=dict)
+def record_contact_interaction(contact_id: str = Path(..., title="The ID of the contact")):
+    """
+    Record a new contact interaction and update streak.
+    This should be called when the user has a meaningful interaction with the contact.
+    """
+    updated_contact = StreakService.update_streak_on_contact(contact_id)
+    
+    if not updated_contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    return {
+        "message": "Contact interaction recorded",
+        "current_streak": updated_contact.get("current_streak", 0),
+        "longest_streak": updated_contact.get("longest_streak", 0)
+    }
+
+
+@router.get("/streaks/stats", response_model=dict)
+def get_streak_statistics():
+    """
+    Get overall streak statistics across all contacts.
+    """
+    return StreakService.get_streak_stats()
+
+
+@router.get("/{contact_id}/streak", response_model=dict)
+def get_contact_streak(contact_id: str = Path(..., title="The ID of the contact")):
+    """
+    Get streak information for a specific contact.
+    """
+    contact = ContactService.get_contact(contact_id)
+    
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    current_streak, longest_streak = StreakService.calculate_streak(contact)
+    
+    return {
+        "contact_id": contact_id,
+        "current_streak": current_streak,
+        "longest_streak": longest_streak,
+        "last_connection": contact.get("last_connection"),
+        "recommended_frequency": contact.get("recommended_contact_freq_days", 7)
+    }

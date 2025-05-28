@@ -4,7 +4,7 @@ from typing import Dict, Any
 from google import genai
 
 from .promptService import prompt_loader
-from .utils import clean_json_response
+from utils.json import clean_json_response
 
 class GeminiClient:
     """A client for interacting with the Gemini API."""

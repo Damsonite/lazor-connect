@@ -1,9 +1,16 @@
 from typing import Dict, Any
 import random
 
-from .utils import normalize_extracted_data  
 from .contactService import ContactService 
 from .geminiClient import GeminiClient
+from utils.json import normalize_extracted_data
+
+# Import feedback_store for logging user feedback
+try:
+    from routers.feedback import feedback_store
+except ImportError:
+    # Fallback if feedback module is not available
+    feedback_store = []  
 
 class ChatService:
     def __init__(self, contact_service: ContactService):
@@ -12,8 +19,8 @@ class ChatService:
     
     async def _log_interaction(self, contact_id: str, user_message: str, bot_response: str):
         """
-        Logs an interaction without storing full conversation history.
-        This could be used for analytics or to update the 'last_connection' field.
+        Logs an interaction and updates streak automatically.
+        This updates the contact's last_connection timestamp and streak data.
         """
         try:
             user_preview = user_message[:30] + "..." if user_message and len(user_message) > 30 else user_message
@@ -23,11 +30,15 @@ class ChatService:
             print(f"User message topic: {user_preview}")
             print(f"Bot response type: {bot_preview}")
             
-            # In a real implementation, you might:
-            # 1. Update the contact's last_connection timestamp
-            # 2. Extract and store topics from the conversation
-            # 3. Update interaction frequency stats
-            pass
+            # Update streak on meaningful interaction
+            from .streakService import StreakService
+            updated_contact = StreakService.update_streak_on_contact(contact_id)
+            
+            if updated_contact:
+                print(f"Updated streak - Current: {updated_contact.get('current_streak', 0)}, Longest: {updated_contact.get('longest_streak', 0)}")
+            else:
+                print(f"Failed to update streak for contact {contact_id}")
+                
         except Exception as e:
             print(f"Error in _log_interaction: {e}")
             # Don't let logging errors affect the main flow
