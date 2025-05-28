@@ -1,12 +1,8 @@
-<div align="center">
+# Lazor Connect
 
-<h1 style="color: #7C3AED;">Lazor Connect</h1>
-
-<img src="apps/mobile/assets/adaptive-icon.png" alt="Lazor Connect Logo" width="120" height="120"/>
+![Lazor Connect Logo](apps/mobile/assets/adaptive-icon.png)
 
 > A full-stack application combining a FastAPI backend with a React Native (Expo) mobile app. Its goal is to promote meaningful human connections through AI-powered conversation guidance, relationship tracking, and personalized interaction suggestions.
-
-</div>
 
 ## 🌟 Project Vision
 

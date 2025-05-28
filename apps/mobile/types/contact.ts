@@ -16,6 +16,11 @@ interface ContactBase {
   relationship_type?: string; // e.g., 'friend', 'family', 'colleague'
   relationship_strength?: number; // 1-5
 
+  // Streak tracking fields
+  current_streak?: number; // Current consecutive days/periods of contact
+  longest_streak?: number; // Longest streak ever achieved
+  last_streak_update?: Date; // Last time streak was calculated
+
   // Contextual informations
   conversation_topics?: string[]; // e.g., 'movies', 'sports'
   important_dates?: { date: Date; description: string }[];

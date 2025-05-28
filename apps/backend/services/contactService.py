@@ -4,7 +4,6 @@ This service handles all business logic related to contacts and manages data sto
 """
 from typing import List, Optional, Dict
 
-from models import Contact, ContactCreate
 from db import supabase
 
 
@@ -55,7 +54,8 @@ class ContactService:
                      "conversation_topics", "important_dates", "reminders",
                      "interests", "family_details", "preferences", "personality",
                      "last_connection", "avg_days_btw_contacts", 
-                     "recommended_contact_freq_days"]:
+                     "recommended_contact_freq_days", "current_streak", 
+                     "longest_streak", "last_streak_update"]:
             if field in contact and contact[field] is not None:
                 payload[field] = contact[field]
                 

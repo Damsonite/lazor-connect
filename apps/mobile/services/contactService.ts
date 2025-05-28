@@ -10,48 +10,10 @@ const api = axios.create({
 
 const createContact = async (contact: ContactCreate) => {
   try {
-    // Create payload with all fields from the contact
-    const payload: ContactCreate = {
-      name: contact.name,
-      // Include all optional fields that exist in the contact object
-      ...(contact.nickname && { nickname: contact.nickname }),
-      ...(contact.birthday && { birthday: contact.birthday }),
-      ...(contact.contact_methods && { contact_methods: contact.contact_methods }),
-      ...(contact.relationship_type && { relationship_type: contact.relationship_type }),
-      ...(contact.relationship_strength && {
-        relationship_strength: contact.relationship_strength,
-      }),
-      ...(contact.conversation_topics && {
-        conversation_topics: contact.conversation_topics,
-      }),
-      ...(contact.important_dates && {
-        important_dates: contact.important_dates,
-      }),
-      ...(contact.reminders && {
-        reminders: contact.reminders,
-      }),
-      ...(contact.interests && {
-        interests: contact.interests,
-      }),
-      ...(contact.family_details && {
-        family_details: contact.family_details,
-      }),
-      ...(contact.preferences && {
-        preferences: contact.preferences,
-      }),
-      ...(contact.personality && {
-        personality: contact.personality,
-      }),
-      ...(contact.last_connection && {
-        last_connection: contact.last_connection,
-      }),
-      ...(contact.avg_days_btw_contacts && {
-        avg_days_btw_contacts: contact.avg_days_btw_contacts,
-      }),
-      ...(contact.recommended_contact_freq_days && {
-        recommended_contact_freq_days: contact.recommended_contact_freq_days,
-      }),
-    };
+    // Filter out undefined values and send only defined fields
+    const payload = Object.fromEntries(
+      Object.entries(contact).filter(([_, value]) => value !== undefined && value !== null)
+    );
 
     const response = await api.post('/contacts', payload);
     console.log('Contact created:', response.data);

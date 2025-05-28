@@ -4,11 +4,10 @@ Contact models for Lazor Connect API.
 
 from datetime import date, datetime
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 from .base import TimestampedModel
-from .enums import ContactType, RelationshipType
 
 
 class ContactMethod(BaseModel):
@@ -51,6 +50,11 @@ class ContactBase(BaseModel):
     relationship_type: Optional[str] = None  # e.g., 'friend', 'family', 'colleague'
     relationship_strength: Optional[int] = None  # 1-5
     
+    # Streak tracking fields
+    current_streak: Optional[int] = None  # Current consecutive days/periods of contact
+    longest_streak: Optional[int] = None  # Longest streak ever achieved
+    last_streak_update: Optional[datetime] = None  # Last time streak was calculated
+    
     # Contextual information
     conversation_topics: Optional[List[str]] = None
     important_dates: Optional[List[ImportantDate]] = None
@@ -60,7 +64,7 @@ class ContactBase(BaseModel):
     interests: Optional[List[str]] = None
     family_details: Optional[str] = None
     preferences: Optional[Preferences] = None
-    personality: Optional[str] = None  # New field for personality information
+    personality: Optional[str] = None
 
 
 class ContactCreate(ContactBase):
@@ -88,6 +92,11 @@ class ContactUpdate(BaseModel):
     recommended_contact_freq_days: Optional[int] = None
     relationship_type: Optional[str] = None
     relationship_strength: Optional[int] = None
+    
+    # Streak tracking fields
+    current_streak: Optional[int] = None
+    longest_streak: Optional[int] = None
+    last_streak_update: Optional[datetime] = None
     
     conversation_topics: Optional[List[str]] = None
     important_dates: Optional[List[ImportantDate]] = None

@@ -4,8 +4,7 @@ Contact router for Lazor Connect API.
 from fastapi import APIRouter, HTTPException, Query, Path
 from typing import List, Optional
 
-from models import Contact, ContactCreate, ContactUpdate
-from models.enums import RelationshipType
+from models import ContactCreate, ContactUpdate
 from services.contactService import ContactService
 
 router = APIRouter(

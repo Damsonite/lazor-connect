@@ -15,8 +15,5 @@ from .contact import (
     Preferences
 )
 
-# Enum types
-from .enums import ContactType, RelationshipType
-
 # Chat-related models
 from .chat import ChatRequest, ProfileUpdateRequest
