@@ -2,7 +2,7 @@
 Contact router for Lazor Connect API.
 """
 from fastapi import APIRouter, HTTPException, Query, Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from models import ContactCreate, ContactUpdate
 from services.contactService import ContactService
@@ -178,3 +178,144 @@ def get_contact_streak(contact_id: str = Path(..., title="The ID of the contact"
         "last_connection": contact.get("last_connection"),
         "recommended_frequency": contact.get("recommended_contact_freq_days", 7)
     }
+
+@router.post("/{contact_id}/contacted", response_model=dict)
+def mark_as_contacted(
+    contact_id: str = Path(..., title="The ID of the contact"),
+    interaction_details: Optional[str] = Query(None, description="Optional details about the interaction")
+):
+    """
+    Mark that the user contacted this person today.
+    This updates the streak and last_connection without going through chat.
+    """
+    updated_contact = StreakService.update_streak_on_contact(contact_id)
+    
+    if not updated_contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    # If interaction details provided, try to extract useful information
+    if interaction_details:
+        try:
+            from services.geminiClient import GeminiClient
+            client = GeminiClient()
+            if client.is_available():
+                # Extract information from the interaction details
+                import asyncio
+                loop = asyncio.get_event_loop()
+                extracted_data = loop.run_until_complete(client.extract_profile_data(interaction_details))
+                
+                if extracted_data:
+                    from utils.json import normalize_extracted_data
+                    extracted_data = normalize_extracted_data(extracted_data)
+                    # Update contact with extracted information
+                    ContactService.update_contact(contact_id, extracted_data)
+        except Exception as e:
+            print(f"Error extracting data from interaction details: {e}")
+    
+    return {
+        "message": "Contact marked as contacted today",
+        "current_streak": updated_contact.get("current_streak", 0),
+        "longest_streak": updated_contact.get("longest_streak", 0),
+        "last_connection": updated_contact.get("last_connection")
+    }
+
+@router.get("/recommendations/due", response_model=List[dict])
+def get_contact_recommendations():
+    """
+    Get AI-powered recommendations for contacts that need attention.
+    Returns contacts sorted by priority (most urgent first) with personalized suggestions.
+    """
+    from datetime import datetime, timezone
+    
+    # Get all contacts that are due
+    due_contacts = ContactService.get_due_for_contact(days_threshold=1)
+    
+    # Enhance with status information and sort by urgency
+    recommendations = []
+    
+    for contact in due_contacts:
+        try:
+            # Calculate status for each contact
+            current_date = datetime.now(timezone.utc)
+            last_connection = contact.get("last_connection")
+            recommended_freq = contact.get("recommended_contact_freq_days", 7)
+            
+            if last_connection:
+                last_conn_date = datetime.fromisoformat(last_connection.replace("Z", "+00:00"))
+                days_since = (current_date - last_conn_date).days
+            else:
+                days_since = 999
+            
+            # Determine urgency
+            if days_since >= recommended_freq * 2:
+                urgency = "high"
+                priority_score = days_since + 100
+            elif days_since >= recommended_freq:
+                urgency = "medium" 
+                priority_score = days_since + 50
+            else:
+                urgency = "low"
+                priority_score = days_since
+            
+            # Generate personalized suggestion
+            suggestion = _generate_contact_suggestion(contact, days_since)
+            
+            recommendations.append({
+                **contact,
+                "days_since_contact": days_since,
+                "urgency_level": urgency,
+                "priority_score": priority_score,
+                "suggestion": suggestion,
+                "conversation_starters": _get_conversation_starters(contact)
+            })
+            
+        except Exception as e:
+            print(f"Error processing contact {contact.get('id')}: {e}")
+            continue
+    
+    # Sort by priority (highest score first)
+    recommendations.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+    
+    return recommendations[:10]  # Return top 10 recommendations
+
+def _generate_contact_suggestion(contact: Dict, days_since: int) -> str:
+    """Generate a personalized suggestion for contacting someone."""
+    name = contact.get('name', 'esta persona')
+    
+    if days_since >= 30:
+        return f"¡Hace mucho que no hablas con {name}! Es hora de reconectarse."
+    elif days_since >= 14:
+        return f"Han pasado {days_since} días. {name} probablemente aprecie saber de ti."
+    elif days_since >= 7:
+        return f"Buen momento para contactar a {name}. ¡Mantén esa conexión!"
+    else:
+        return f"¿Ya hablaste con {name} hoy? ¡Sigue con esa racha!"
+
+def _get_conversation_starters(contact: Dict) -> List[str]:
+    """Generate conversation starters based on contact information."""
+    starters = []
+    name = contact.get('name', 'esta persona')
+    
+    # Based on interests
+    if contact.get('interests'):
+        interest = contact['interests'][0]  # Take first interest
+        starters.append(f"¿Cómo va tu {interest}? ¡Me gustaría saber qué has estado haciendo!")
+    
+    # Based on relationship type
+    rel_type = contact.get('relationship_type', '').lower()
+    if rel_type == 'family':
+        starters.append("¿Cómo está la familia? ¡Tengo ganas de saber de ustedes!")
+    elif rel_type == 'friend':
+        starters.append("¡Hola! ¿Qué tal todo? Tenía ganas de charlar contigo.")
+    elif rel_type == 'colleague':
+        starters.append("¿Cómo van las cosas en el trabajo? ¡Espero que todo esté bien!")
+    
+    # Generic starters
+    if not starters:
+        starters.extend([
+            f"¡Hola {name}! ¿Cómo estás? Tenía ganas de saber de ti.",
+            f"¿Qué tal todo, {name}? ¡Espero que tengas un buen día!",
+            f"¡Hola! ¿Cómo han estado las cosas? Me acordé de ti y quería saludar."
+        ])
+    
+    return starters[:3]  # Return max 3 starters

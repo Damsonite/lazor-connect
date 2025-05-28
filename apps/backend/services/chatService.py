@@ -1,5 +1,7 @@
 from typing import Dict, Any
 import random
+import json
+from datetime import datetime, timezone
 
 from .contactService import ContactService 
 from .geminiClient import GeminiClient
@@ -46,112 +48,404 @@ class ChatService:
     async def handle_message(self, contact_id: str, user_message: str) -> Dict[str, Any]:
         """
         Handles an incoming message from a user for a specific contact.
-        Provides short, conversational responses to help build the contact profile.
-        Occasionally asks for open-ended feedback and stores the user's reply as feedback.
+        Focuses on motivating regular contact like Duolingo, rather than just collecting information.
         """
         contact = self.contact_service.get_contact(contact_id)
         if not contact:
             return {"error": "Contact not found", "status_code": 404}
 
-        # Use GeminiClient to handle the conversation
-        try:
-            bot_response_text = await self.client.handle_conversation(contact, user_message)
-            # Occasionally ask for feedback (e.g., 1 in 5 chance)
-            if random.randint(1, 5) == 1:
-                bot_response_text += "\n\nBy the way, how am I doing? Feel free to share any feedback or suggestions."
-        except Exception as e:
-            print(f"Error in handle_conversation: {e}")
-            bot_response_text = "I'm sorry, I encountered an error processing your message. Please try again later."
+        # Check if user is confirming they contacted someone
+        contact_confirmation = await self._check_contact_confirmation(user_message)
+        if contact_confirmation["is_confirmation"]:
+            return await self._handle_contact_confirmation(contact_id, user_message, contact_confirmation)
 
-        # Detect if the user's message is a feedback reply (open-ended, not like/dislike)
-        feedback_triggers = ["feedback", "suggestion", "improve", "doing", "better", "worse", "bad", "good"]
-        if any(kw in user_message.lower() for kw in feedback_triggers):
-            feedback_store.append({
-                "type": "open_feedback",
-                "message": user_message,
-                "contact_id": contact_id,
-                "timestamp": __import__('datetime').datetime.now().isoformat()
-            })
+        # Check if user is providing information about preference changes
+        preference_changes = await self._extract_preference_changes(user_message, contact)
+        if preference_changes:
+            await self._handle_preference_changes(contact_id, preference_changes)
 
-        # Log the interaction instead of storing conversation history
-        await self._log_interaction(contact_id, user_message, bot_response_text)
+        # Get contact status to determine response type
+        contact_status = self._get_contact_status(contact)
         
-        # Extract any potential profile data directly
+        # Generate appropriate response based on status
+        if contact_status["message_type"] == "motivate":
+            bot_response_text = await self._generate_motivation_message(contact, contact_status)
+        elif contact_status["message_type"] == "check":
+            bot_response_text = await self._generate_check_message(contact, contact_status)
+        else:  # celebrate
+            bot_response_text = await self._generate_celebration_message(contact, contact_status)
+
+        # Extract any potential profile data from the message
         extracted_data = {}
         if self.client.is_available() and user_message:
             try:
-                # Get raw extracted data from GeminiClient
                 extracted_data = await self.client.extract_profile_data(user_message)
-                # Normalize the data using the external utility function
+                from utils.json import normalize_extracted_data
                 extracted_data = normalize_extracted_data(extracted_data)
-                # Update contact if we have data
                 if contact_id and extracted_data:
                     await self._update_contact_with_extracted_data(contact_id, extracted_data)
             except Exception as e:
-                print(f"Error extracting or processing profile data: {e}")
-                # Continue without extracted data
+                print(f"Error extracting profile data: {e}")
                 extracted_data = {}
 
-        # --- Update last_connection if AI extracted it ---
-        if extracted_data and 'last_connection' in extracted_data and extracted_data['last_connection']:
-            from datetime import datetime, timezone, timedelta
-            try:
-                last_conn = extracted_data['last_connection']
-                # Handle common relative dates
-                if isinstance(last_conn, str):
-                    lowered = last_conn.strip().lower()
-                    if lowered == 'yesterday':
-                        dt = datetime.now(timezone.utc) - timedelta(days=1)
-                        last_conn = dt.replace(hour=12, minute=0, second=0, microsecond=0).isoformat()
-                    elif lowered == 'today':
-                        dt = datetime.now(timezone.utc)
-                        last_conn = dt.replace(hour=12, minute=0, second=0, microsecond=0).isoformat()
-                    else:
-                        try:
-                            dt = datetime.fromisoformat(last_conn)
-                            last_conn = dt.astimezone(timezone.utc).isoformat()
-                        except Exception:
-                            print(f"Could not parse last_connection string as ISO datetime: {last_conn}")
-                            last_conn = None
-                elif hasattr(last_conn, 'isoformat'):
-                    last_conn = last_conn.astimezone(timezone.utc).isoformat()
-                if last_conn:
-                    self.contact_service.update_contact(contact_id, {"last_connection": last_conn})
-            except Exception as e:
-                print(f"Failed to update last_connection for contact {contact_id} from AI extraction: {e}")
-        # --- End update ---
+        # Log the interaction
+        await self._log_interaction(contact_id, user_message, bot_response_text)
 
         return {
             "contact_id": contact_id,
             "user_message": user_message,
             "bot_response": bot_response_text,
-            "contact_details": contact, # Return contact details for context if needed by frontend
-            "profile_suggestions": extracted_data # Any structured data we extracted
+            "contact_details": contact,
+            "contact_status": contact_status,
+            "profile_suggestions": extracted_data
         }
 
-    async def get_initial_greeting(self, contact_id: str) -> Dict[str, Any]:
+    def _get_contact_status(self, contact: Dict) -> Dict[str, Any]:
         """
-        Provides an initial greeting focused on building the contact's profile.
+        Determine the current status of a contact based on last connection and recommended frequency.
         """
-        contact = self.contact_service.get_contact(contact_id)
-        if not contact:
+        current_date = datetime.now(timezone.utc)
+        last_connection = contact.get("last_connection")
+        recommended_freq = contact.get("recommended_contact_freq_days") or 7  # Default to 7 days if None
+        
+        if not last_connection:
+            return {
+                "status": "OVERDUE",
+                "days_since_contact": 999,
+                "recommended_frequency": recommended_freq,
+                "message_type": "motivate",
+                "urgency_level": "high"
+            }
+        
+        # Parse last connection date with better error handling
+        try:
+            # Remove any Z suffix and add UTC timezone
+            clean_date_str = last_connection.replace('Z', '').replace('UTC', '')
+            
+            # Try to parse as ISO format
+            last_conn_date = datetime.fromisoformat(clean_date_str)
+            
+            # Make timezone-aware if it isn't already
+            if last_conn_date.tzinfo is None:
+                last_conn_date = last_conn_date.replace(tzinfo=timezone.utc)
+                
+            days_since = (current_date - last_conn_date).days
+            print(f"Successfully parsed date. Days since contact: {days_since}")
+            
+        except Exception as e:
+            print(f"Error parsing last_connection date '{last_connection}': {e}")
+            # If we can't parse the date, assume it's overdue
+            days_since = 999
+            
+        # Determine status
+        if days_since == 0:
+            status = "CONTACTED_TODAY"
+            message_type = "celebrate"
+            urgency_level = "low"
+        elif days_since >= recommended_freq:
+            status = "OVERDUE"
+            message_type = "motivate"
+            urgency_level = "high"
+        elif days_since == recommended_freq - 1:
+            status = "DUE_TODAY"
+            message_type = "motivate"
+            urgency_level = "medium"
+        elif days_since <= 2:
+            status = "RECENT_BUT_CHECK"
+            message_type = "check"
+            urgency_level = "low"
+        else:
+            status = "OVERDUE"
+            message_type = "motivate"
+            urgency_level = "medium"
+            
+        return {
+            "status": status,
+            "days_since_contact": days_since,
+            "recommended_frequency": recommended_freq,
+            "message_type": message_type,
+            "urgency_level": urgency_level
+        }
+
+    async def _check_contact_confirmation(self, user_message: str) -> Dict[str, Any]:
+        """
+        Check if the user is confirming they contacted someone.
+        """
+        confirmation_keywords = [
+            "yes", "yeah", "yep", "si", "sí", "talked", "spoke", "called", "texted", 
+            "messaged", "met", "saw", "visited", "contacted", "reached out", "hablé", "llamé"
+        ]
+        
+        message_lower = user_message.lower()
+        is_confirmation = any(keyword in message_lower for keyword in confirmation_keywords)
+        
+        # Check for negative responses
+        negative_keywords = ["no", "not", "haven't", "didn't", "nope"]
+        is_negative = any(keyword in message_lower for keyword in negative_keywords)
+        
+        return {
+            "is_confirmation": is_confirmation and not is_negative,
+            "is_negative": is_negative,
+            "confidence": 0.8 if is_confirmation else 0.3
+        }
+
+    async def _handle_contact_confirmation(self, contact_id: str, user_message: str, confirmation: Dict) -> Dict[str, Any]:
+        """
+        Handle when user confirms they contacted someone.
+        """
+        # Update streak and last connection
+        from .streakService import StreakService
+        updated_contact = StreakService.update_streak_on_contact(contact_id)
+        
+        if not updated_contact:
             return {"error": "Contact not found", "status_code": 404}
         
-        # Check how complete the contact's profile is
-        profile_completeness = self._calculate_profile_completeness(contact)
+        # Generate celebration response
+        current_streak = updated_contact.get("current_streak", 0)
+        longest_streak = updated_contact.get("longest_streak", 0)
         
-        # Use GeminiClient for greeting generation
-        try:
-            greeting_text = await self.client.get_initial_greeting(contact, profile_completeness)
-        except Exception as e:
-            print(f"Error getting initial greeting: {e}")
-            greeting_text = "Hello! I'm here to help you keep in touch with your contacts."
+        celebration_messages = [
+            f"¡Fantástico! Tu racha con {updated_contact.get('name')} ahora es de {current_streak} días. ¡Sigue así!",
+            f"¡Excelente! Has mantenido el contacto {current_streak} días seguidos. ¡Qué buena conexión!",
+            f"¡Increíble! Tu racha es de {current_streak} días. Realmente valoras esta relación."
+        ]
+        
+        if current_streak == longest_streak and current_streak > 1:
+            celebration_messages.append(f"¡Nuevo récord! {current_streak} días es tu racha más larga con {updated_contact.get('name')}!")
+        
+        import random
+        bot_response = random.choice(celebration_messages)
+        
+        # Ask about the interaction
+        bot_response += " ¿De qué hablaron? Me ayudará a sugerir temas para la próxima vez."
+        
+        # Extract information from the user's description
+        extracted_data = {}
+        if self.client.is_available():
+            try:
+                extracted_data = await self.client.extract_profile_data(user_message)
+                from utils.json import normalize_extracted_data
+                extracted_data = normalize_extracted_data(extracted_data)
+                if extracted_data:
+                    await self._update_contact_with_extracted_data(contact_id, extracted_data)
+            except Exception as e:
+                print(f"Error extracting data from confirmation: {e}")
         
         return {
             "contact_id": contact_id,
-            "greeting": greeting_text,
-            "contact_details": contact
+            "user_message": user_message,
+            "bot_response": bot_response,
+            "contact_details": updated_contact,
+            "streak_updated": True,
+            "current_streak": current_streak,
+            "profile_suggestions": extracted_data
         }
+
+    async def _generate_motivation_message(self, contact: Dict, status: Dict) -> str:
+        """
+        Generate a motivational message to encourage contacting someone.
+        """
+        name = contact.get('name', 'esta persona')
+        days_since = status["days_since_contact"]
+        
+        if self.client.is_available():
+            try:
+                # Use Gemini to generate personalized conversation starters
+                duolingo_prompt = self._build_duolingo_prompt(contact, status, "motivate")
+                return await self.client.generate_content(duolingo_prompt)
+            except Exception as e:
+                print(f"Error generating motivation message: {e}")
+        
+        # Fallback messages
+        if days_since >= 14:
+            return f"¡Han pasado {days_since} días desde que contactaste a {name}! Es momento de reconectarse. ¿Qué tal si les preguntas cómo están?"
+        elif days_since >= 7:
+            return f"Han pasado {days_since} días desde tu última conexión con {name}. ¿Has hablado con ellos hoy?"
+        else:
+            return f"¿Ya contactaste a {name} hoy? ¡Mantén esa racha activa!"
+
+    async def _generate_check_message(self, contact: Dict, status: Dict) -> str:
+        """
+        Generate a message to check if user has contacted someone recently.
+        """
+        name = contact.get('name', 'esta persona')
+        
+        if self.client.is_available():
+            try:
+                duolingo_prompt = self._build_duolingo_prompt(contact, status, "check")
+                return await self.client.generate_content(duolingo_prompt)
+            except Exception as e:
+                print(f"Error generating check message: {e}")
+        
+        return f"¿Has hablado con {name} hoy? Si no, ¡es un buen momento para contactarlos!"
+
+    async def _generate_celebration_message(self, contact: Dict, status: Dict) -> str:
+        """
+        Generate a celebration message for recent contact.
+        """
+        name = contact.get('name', 'esta persona')
+        current_streak = contact.get('current_streak', 0)
+        
+        if self.client.is_available():
+            try:
+                duolingo_prompt = self._build_duolingo_prompt(contact, status, "celebrate")
+                return await self.client.generate_content(duolingo_prompt)
+            except Exception as e:
+                print(f"Error generating celebration message: {e}")
+        
+        return f"¡Excelente! Ya contactaste a {name} hoy. Tu racha actual es de {current_streak} días. ¿Cómo estuvo la conversación?"
+
+    def _build_duolingo_prompt(self, contact: Dict, status: Dict, message_type: str) -> str:
+        """
+        Build a prompt for Duolingo-style messaging.
+        """
+        # Load Duolingo mode instructions
+        duolingo_instructions = self.client._load_prompt_if_exists("duolingo_mode_instructions")
+        
+        prompt_parts = [duolingo_instructions or "You are a relationship motivation assistant like Duolingo for connections."]
+        
+        # Add contact context
+        name = contact.get('name', 'esta persona')
+        prompt_parts.append(f"Contact: {name}")
+        
+        if contact.get('interests'):
+            prompt_parts.append(f"Interests: {', '.join(contact.get('interests'))}")
+        if contact.get('conversation_topics'):
+            prompt_parts.append(f"Previous topics: {', '.join(contact.get('conversation_topics'))}")
+        if contact.get('relationship_type'):
+            prompt_parts.append(f"Relationship: {contact.get('relationship_type')}")
+        
+        # Add status information
+        prompt_parts.append(f"Days since last contact: {status['days_since_contact']}")
+        prompt_parts.append(f"Recommended frequency: every {status['recommended_frequency']} days")
+        prompt_parts.append(f"Current streak: {contact.get('current_streak', 0)} days")
+        prompt_parts.append(f"Message type needed: {message_type}")
+        
+        return "\n".join(prompt_parts)
+
+    async def _extract_preference_changes(self, user_message: str, contact: Dict) -> Dict[str, Any]:
+        """
+        Extract changes in preferences (like "they don't like X anymore").
+        """
+        if not self.client.is_available():
+            return {}
+        
+        change_indicators = ["doesn't like", "don't like", "no longer", "stopped", "quit", "gave up", "used to like"]
+        message_lower = user_message.lower()
+        
+        if not any(indicator in message_lower for indicator in change_indicators):
+            return {}
+        
+        try:
+            # Use AI to extract preference changes
+            change_prompt = f"""
+            Analyze this message for preference changes about a contact:
+            "{user_message}"
+            
+            Look for things they NO LONGER like or do. Return JSON with:
+            {{
+                "removed_interests": ["list of interests to remove"],
+                "removed_likes": ["list of likes to remove"], 
+                "added_dislikes": ["list of new dislikes"],
+                "changes_detected": true/false
+            }}
+            """
+            
+            response = await self.client.generate_content(change_prompt)
+            from utils.json import clean_json_response
+            import json
+            
+            cleaned_response = clean_json_response(response)
+            return json.loads(cleaned_response)
+            
+        except Exception as e:
+            print(f"Error extracting preference changes: {e}")
+            return {}
+
+    async def _handle_preference_changes(self, contact_id: str, changes: Dict[str, Any]) -> None:
+        """
+        Handle preference changes by updating the contact.
+        """
+        if not changes.get("changes_detected"):
+            return
+        
+        contact = self.contact_service.get_contact(contact_id)
+        if not contact:
+            return
+        
+        update_payload = {}
+        
+        # Remove interests
+        if changes.get("removed_interests"):
+            current_interests = contact.get('interests', []) or []
+            updated_interests = [i for i in current_interests if i not in changes["removed_interests"]]
+            update_payload['interests'] = updated_interests
+        
+        # Update preferences
+        if changes.get("removed_likes") or changes.get("added_dislikes"):
+            current_prefs = contact.get('preferences', {}) or {}
+            
+            if changes.get("removed_likes"):
+                current_likes = current_prefs.get('likes', []) or []
+                updated_likes = [l for l in current_likes if l not in changes["removed_likes"]]
+                current_prefs['likes'] = updated_likes
+            
+            if changes.get("added_dislikes"):
+                current_dislikes = current_prefs.get('dislikes', []) or []
+                new_dislikes = list(set(current_dislikes + changes["added_dislikes"]))
+                current_prefs['dislikes'] = new_dislikes
+            
+            update_payload['preferences'] = current_prefs
+        
+        if update_payload:
+            self.contact_service.update_contact(contact_id, update_payload)
+            print(f"Updated contact {contact_id} with preference changes: {update_payload}")
+
+    async def get_initial_greeting(self, contact_id: str) -> Dict[str, Any]:
+        """
+        Provides an initial greeting focused on motivating contact like Duolingo.
+        """
+        try:
+            print(f"Getting greeting for contact: {contact_id}")
+            contact = self.contact_service.get_contact(contact_id)
+            if not contact:
+                return {"error": "Contact not found", "status_code": 404}
+            
+            print(f"Contact found: {contact.get('name')}")
+            
+            # Get contact status to determine the type of greeting
+            print("Getting contact status...")
+            contact_status = self._get_contact_status(contact)
+            print(f"Contact status: {contact_status}")
+            
+            # Generate appropriate greeting based on status
+            print(f"Generating {contact_status['message_type']} message...")
+            try:
+                if contact_status["message_type"] == "motivate":
+                    greeting_text = await self._generate_motivation_message(contact, contact_status)
+                elif contact_status["message_type"] == "check":
+                    greeting_text = await self._generate_check_message(contact, contact_status)
+                else:  # celebrate
+                    greeting_text = await self._generate_celebration_message(contact, contact_status)
+                print(f"Generated greeting: {greeting_text[:50]}...")
+            except Exception as e:
+                print(f"Error generating greeting message: {e}")
+                import traceback
+                traceback.print_exc()
+                name = contact.get('name', 'esta persona')
+                greeting_text = f"¡Hola! Te ayudo a mantener el contacto con {name}."
+            
+            return {
+                "contact_id": contact_id,
+                "greeting": greeting_text,
+                "contact_details": contact,
+                "contact_status": contact_status
+            }
+        except Exception as e:
+            print(f"Error in get_initial_greeting: {e}")
+            import traceback
+            traceback.print_exc()
+            raise e
         
     def _calculate_profile_completeness(self, contact: Dict) -> int:
         """

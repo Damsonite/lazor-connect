@@ -153,7 +153,7 @@ class GeminiClient:
         
     async def handle_conversation(self, contact_data: Dict, user_message: str) -> str:
         """
-        Handles a conversation message, creating an appropriate response based on contact data.
+        Handles a conversation message with Duolingo-style motivation focus.
         
         Args:
             contact_data: Dictionary containing contact data
@@ -162,53 +162,43 @@ class GeminiClient:
         Returns:
             The bot's response
         """
-        # Construct the prompt for Gemini focused on contact profile building
+        # Load Duolingo mode instructions
+        duolingo_instructions = self._load_prompt_if_exists("duolingo_mode_instructions")
+        
+        # Construct the prompt for Gemini focused on relationship motivation
         prompt_parts = []
         
-        # Load base chat instructions
-        chat_base_instructions = prompt_loader.load_prompt("chat_base_instructions")
-        if chat_base_instructions:
-            prompt_parts.append(chat_base_instructions)
+        if duolingo_instructions:
+            prompt_parts.append(duolingo_instructions)
         else:
-            print("Warning: chat_base_instructions.md template not found.")
-            prompt_parts.append("You are a helpful assistant for enriching contact relationships. You keep responses brief and conversational.")
+            # Fallback instructions
+            prompt_parts.append("""
+            You are a relationship motivation assistant like Duolingo for connections.
+            Your goal is to motivate regular contact with people, not just collect information.
+            Keep responses SHORT and motivating (2-3 sentences max).
+            Focus on encouraging contact and celebrating relationship maintenance.
+            """)
         
-        prompt_parts.append(f"You are currently helping with a contact named {contact_data.get('name', 'this person')}.")
+        prompt_parts.append(f"Contact: {contact_data.get('name', 'this person')}")
         
         # Add context from relevant contact fields
         if contact_data.get('interests'):
             prompt_parts.append(f"Known interests: {', '.join(contact_data.get('interests'))}")
         if contact_data.get('conversation_topics'):
             prompt_parts.append(f"Previous conversation topics: {', '.join(contact_data.get('conversation_topics'))}")
-        if contact_data.get('important_dates'):
-            dates = [f"{d.get('description')}: {d.get('date')}" for d in contact_data.get('important_dates')]
-            prompt_parts.append(f"Important dates: {', '.join(dates)}")
         if contact_data.get('last_connection'):
             prompt_parts.append(f"Last connection: {contact_data.get('last_connection')}")
+        if contact_data.get('current_streak'):
+            prompt_parts.append(f"Current streak: {contact_data.get('current_streak')} days")
         if contact_data.get('relationship_type'):
             prompt_parts.append(f"Relationship type: {contact_data.get('relationship_type')}")
-        if contact_data.get('preferences') and contact_data.get('preferences').get('likes'):
-            prompt_parts.append(f"Likes: {', '.join(contact_data.get('preferences').get('likes'))}")
-        if contact_data.get('preferences') and contact_data.get('preferences').get('dislikes'):
-            prompt_parts.append(f"Dislikes: {', '.join(contact_data.get('preferences').get('dislikes'))}")
-        if contact_data.get('family_details'):
-            prompt_parts.append(f"Family details: {contact_data.get('family_details')}")
-        if contact_data.get('personality'):
-            prompt_parts.append(f"Personality: {contact_data.get('personality')}")
         
-        # Load and add assistant instructions from markdown file
-        assistant_instructions = prompt_loader.load_prompt("assistant_instructions")
-        if assistant_instructions:
-            prompt_parts.append(assistant_instructions)
-        else:
-            print("Warning: assistant_instructions.md not found")
-        
-        prompt_parts.append(f"The user's message is: '{user_message}'")
+        prompt_parts.append(f"User message: '{user_message}'")
         
         # Final prompt assembly
         full_prompt = "\n".join(prompt_parts)
         
-        # Call the API with our contact-focused prompt
+        # Call the API with our motivation-focused prompt
         return await self.generate_content(prompt=full_prompt)
         
     def _create_template_if_missing(self, template_name: str, template_content: str) -> bool:
@@ -244,3 +234,12 @@ class GeminiClient:
         except Exception as e:
             print(f"Error creating {template_name}.md template: {e}")
             return False
+    
+    def _load_prompt_if_exists(self, prompt_name: str) -> str:
+        """
+        Load a prompt template if it exists, otherwise return empty string.
+        """
+        try:
+            return prompt_loader.load_prompt(prompt_name)
+        except Exception:
+            return ""

@@ -18,13 +18,13 @@ class StreakService:
         Calculate current and longest streak for a contact
         """
         if not contact.get("last_connection"):
-            return 0, contact.get("longest_streak", 0)
+            return 0, contact.get("longest_streak") or 0
             
         current_date = datetime.now(timezone.utc)
         last_connection = parse_date_string(contact["last_connection"])
         
         if last_connection is None:
-            return 0, contact.get("longest_streak", 0)
+            return 0, contact.get("longest_streak") or 0
         
         # Get the recommended frequency (default to 7 days if not set)
         recommended_freq = contact.get("recommended_contact_freq_days", 7)
@@ -33,12 +33,12 @@ class StreakService:
         days_since_contact = get_days_since_date(last_connection, current_date)
         
         if days_since_contact is None:
-            return 0, contact.get("longest_streak", 0)
+            return 0, contact.get("longest_streak") or 0
         
         # Current streak logic:
         # - If within the recommended frequency window, maintain current streak
         # - If exceeded by 1 day grace period, reset to 0
-        current_streak = contact.get("current_streak", 0)
+        current_streak = contact.get("current_streak") or 0
         
         if days_since_contact <= recommended_freq + 1:  # 1 day grace period
             # Maintain current streak (it gets incremented when contact is made)
@@ -50,7 +50,7 @@ class StreakService:
         # Longest streak should never decrease
         longest_streak = max(
             current_streak,
-            contact.get("longest_streak", 0)
+            contact.get("longest_streak") or 0
         )
         
         return current_streak, longest_streak
@@ -75,12 +75,16 @@ class StreakService:
         # Calculate new streak values
         current_streak, longest_streak = StreakService.calculate_streak(contact)
         
+        print(f"DEBUG: After calculate_streak - current: {current_streak}, longest: {longest_streak}")
+        
         # Check if this is a new contact period (not same day)
         last_connection = parse_date_string(contact.get("last_connection"))
             
         # Only increment if it's a different day or first contact
         if not last_connection or not is_same_day(last_connection, current_date):
+            print(f"DEBUG: Incrementing streak from {current_streak}")
             current_streak += 1
+            print(f"DEBUG: New current_streak: {current_streak}")
             
         # Update longest streak if current is higher
         longest_streak = max(current_streak, longest_streak)
@@ -110,8 +114,8 @@ class StreakService:
         contacts_with_streaks = 0
         
         for contact in contacts:
-            current_streak = contact.get("current_streak", 0)
-            longest_streak = contact.get("longest_streak", 0)
+            current_streak = contact.get("current_streak") or 0
+            longest_streak = contact.get("longest_streak") or 0
             
             if current_streak > 0:
                 total_active_streaks += current_streak

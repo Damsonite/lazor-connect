@@ -178,26 +178,40 @@ class ContactService:
         1. Current date - last_connection > recommended_contact_freq_days
         2. If recommended_contact_freq_days is not set, uses days_threshold parameter
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         # Get all contacts
         all_contacts = ContactService.list_contacts()
         
         # Filter contacts that are due for contact
         due_contacts = []
-        current_date = datetime.now()
+        current_date = datetime.now(timezone.utc)
         
         for contact in all_contacts:
             # Skip if no last_connection date
             if not contact.get("last_connection"):
                 continue
                 
-            last_connection = datetime.fromisoformat(contact["last_connection"].replace("Z", "+00:00"))
-            recommended_freq = contact.get("recommended_contact_freq_days", days_threshold)
-            
-            days_since_contact = (current_date - last_connection).days
-            if days_since_contact >= recommended_freq:
-                due_contacts.append(contact)
+            try:
+                # Handle timezone issues like in ChatService
+                last_connection_str = contact["last_connection"]
+                clean_date_str = last_connection_str.replace('Z', '').replace('UTC', '')
+                
+                # Try to parse as ISO format
+                last_connection = datetime.fromisoformat(clean_date_str)
+                
+                # Make timezone-aware if it isn't already
+                if last_connection.tzinfo is None:
+                    last_connection = last_connection.replace(tzinfo=timezone.utc)
+                    
+                recommended_freq = contact.get("recommended_contact_freq_days") or days_threshold  # Default to days_threshold if None
+                
+                days_since_contact = (current_date - last_connection).days
+                if days_since_contact >= recommended_freq:
+                    due_contacts.append(contact)
+            except Exception as e:
+                print(f"Error parsing date for contact {contact.get('id')}: {e}")
+                continue
                 
         return due_contacts
     

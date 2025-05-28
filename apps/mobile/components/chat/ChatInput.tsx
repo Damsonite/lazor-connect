@@ -38,10 +38,11 @@ export default function ChatInput({
       <TouchableOpacity
         style={{
           backgroundColor: !inputMessage.trim()
-            ? withOpacity('text', 0.2, mode)
+            ? withOpacity('primary', 0.1, mode)
             : colors.primary[mode],
+          borderColor: withOpacity('primary', 0.2, mode),
         }}
-        className="size-14 items-center justify-center rounded-full"
+        className="size-14 items-center justify-center rounded-full border"
         onPress={handleSendMessage}
         disabled={!inputMessage.trim() || sendingMessage}>
         <Send size={20} color={colors.background[mode]} />

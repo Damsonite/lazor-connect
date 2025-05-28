@@ -1,6 +1,6 @@
 import { Flame } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import ContactDetail from '~/components/chat/ContactDetail';
@@ -18,6 +18,25 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
     return `${value}/5`;
   };
 
+  // Check if there are details to show
+  const hasDetails = useMemo(() => {
+    return !!(
+      contact.nickname ||
+      contact.last_connection ||
+      contact.birthday ||
+      contact.relationship_type ||
+      contact.relationship_strength ||
+      contact.interests ||
+      contact.conversation_topics ||
+      contact.family_details ||
+      contact.personality
+    );
+  }, [contact]);
+
+  const toggleExpanded = () => {
+    setExpanded((prev) => !prev);
+  };
+
   return (
     <View
       className="max-h-[40%] border-b p-4"
@@ -31,11 +50,11 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
           <Text className="font-exsemibold text-lg text-accent">{contact.current_streak || 0}</Text>
         </View>
 
-        <Text
-          className="px-2 py-1 font-itmedium text-primary"
-          onPress={() => setExpanded((prev) => !prev)}>
-          {expanded ? 'Show less' : 'Show more'}
-        </Text>
+        {hasDetails && (
+          <Text className="px-2 py-1 font-itmedium text-primary" onPress={toggleExpanded}>
+            {expanded ? 'Show less' : 'Show more'}
+          </Text>
+        )}
       </View>
 
       {expanded && (
