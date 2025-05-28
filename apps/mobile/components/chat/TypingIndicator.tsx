@@ -1,4 +1,7 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
+import { ActivityIndicator, Text, View } from 'react-native';
+
+import { colors } from '~/utils/colors';
 
 export interface TypingIndicatorType {
   id: string;
@@ -10,29 +13,15 @@ interface TypingIndicatorProps {
 }
 
 export default function TypingIndicator({ typingIndicator }: TypingIndicatorProps) {
+  const { colorScheme } = useColorScheme();
+  const mode = colorScheme ?? 'light';
+
   if (!typingIndicator) return null;
 
   return (
-    <View style={styles.typingIndicator}>
-      <ActivityIndicator size="small" color="#6366f1" />
-      <Text style={styles.typingText}>AI is typing...</Text>
+    <View className="border-gray flex-row border-t bg-secondary px-4 py-2">
+      <ActivityIndicator size="small" color={colors.primary[mode]} />
+      <Text className="ml-2 font-itregular text-primary">AI is typing...</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  typingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  typingText: {
-    fontSize: 14,
-    color: '#888',
-    marginLeft: 8,
-  },
-});

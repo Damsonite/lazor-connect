@@ -11,6 +11,7 @@ module.exports = {
         accent: 'var(--color-accent)',
         text: 'var(--color-text)',
         background: 'var(--color-background)',
+        gray: 'var(--color-gray)',
         confirm: 'var(--color-confirm)',
         danger: 'var(--color-danger)',
       },

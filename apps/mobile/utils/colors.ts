@@ -6,8 +6,8 @@ const colors = {
     dark: '#C084FC',
   },
   secondary: {
-    light: '#06B6D4',
-    dark: '#22D3EE',
+    light: '#EDE9FE',
+    dark: '#191d35',
   },
   accent: {
     light: '#F97316',
@@ -20,6 +20,10 @@ const colors = {
   background: {
     light: '#F1F5F9',
     dark: '#0F172A',
+  },
+  gray: {
+    light: '#E5E7EB',
+    dark: '#2F3244',
   },
   confirm: {
     light: '#22C55E',
@@ -38,6 +42,7 @@ const themes = {
     '--color-accent': colors.accent.light,
     '--color-text': colors.text.light,
     '--color-background': colors.background.light,
+    '--color-gray': colors.gray.light,
     '--color-confirm': colors.confirm.light,
     '--color-danger': colors.danger.light,
   }),
@@ -47,12 +52,21 @@ const themes = {
     '--color-accent': colors.accent.dark,
     '--color-text': colors.text.dark,
     '--color-background': colors.background.dark,
+    '--color-gray': colors.gray.dark,
     '--color-confirm': colors.confirm.dark,
     '--color-danger': colors.danger.dark,
   }),
 };
 
-type Color = 'primary' | 'secondary' | 'accent' | 'text' | 'background' | 'confirm' | 'danger';
+type Color =
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'text'
+  | 'background'
+  | 'gray'
+  | 'confirm'
+  | 'danger';
 
 const withOpacity = (color: Color, opacity: number, mode: 'light' | 'dark') => {
   const hex = colors[color][mode];

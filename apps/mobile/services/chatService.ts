@@ -18,6 +18,19 @@ export const sendChatMessage = async (
       message,
     });
     console.log(`Message sent to AI for contact ${contactId}:`, response.data);
+
+    // Validate response data
+    if (!response.data.bot_response) {
+      console.warn(
+        `Bot response is missing or null for contact ${contactId}. Using fallback message.`
+      );
+      response.data.bot_response = "I'm sorry, I couldn't process your message. Please try again.";
+    }
+
+    if (!response.data.profile_suggestions) {
+      response.data.profile_suggestions = {};
+    }
+
     return response.data;
   } catch (error) {
     // More detailed error logging

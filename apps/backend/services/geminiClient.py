@@ -153,7 +153,7 @@ class GeminiClient:
         
     async def handle_conversation(self, contact_data: Dict, user_message: str) -> str:
         """
-        Handles a conversation message with Duolingo-style motivation focus.
+        Handles a conversation message with motivation focus for relationship building.
         
         Args:
             contact_data: Dictionary containing contact data
@@ -162,18 +162,18 @@ class GeminiClient:
         Returns:
             The bot's response
         """
-        # Load Duolingo mode instructions
-        duolingo_instructions = self._load_prompt_if_exists("duolingo_mode_instructions")
+        # Load motivation mode instructions
+        motivation_instructions = self._load_prompt_if_exists("motivation_mode_instructions")
         
         # Construct the prompt for Gemini focused on relationship motivation
         prompt_parts = []
         
-        if duolingo_instructions:
-            prompt_parts.append(duolingo_instructions)
+        if motivation_instructions:
+            prompt_parts.append(motivation_instructions)
         else:
             # Fallback instructions
             prompt_parts.append("""
-            You are a relationship motivation assistant like Duolingo for connections.
+            You are a relationship motivation assistant that helps people maintain meaningful connections.
             Your goal is to motivate regular contact with people, not just collect information.
             Keep responses SHORT and motivating (2-3 sentences max).
             Focus on encouraging contact and celebrating relationship maintenance.

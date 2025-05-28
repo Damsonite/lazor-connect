@@ -27,7 +27,11 @@ class StreakService:
             return 0, contact.get("longest_streak") or 0
         
         # Get the recommended frequency (default to 7 days if not set)
-        recommended_freq = contact.get("recommended_contact_freq_days", 7)
+        recommended_freq = contact.get("recommended_contact_freq_days") or 7
+        
+        # Ensure recommended_freq is an integer
+        if not isinstance(recommended_freq, int):
+            recommended_freq = 7
         
         # Calculate days since last contact
         days_since_contact = get_days_since_date(last_connection, current_date)
@@ -53,7 +57,8 @@ class StreakService:
             contact.get("longest_streak") or 0
         )
         
-        return current_streak, longest_streak
+        # Ensure we always return integers
+        return int(current_streak), int(longest_streak)
     
     @staticmethod
     def update_streak_on_contact(contact_id: str) -> Optional[Dict]:
@@ -74,6 +79,10 @@ class StreakService:
         
         # Calculate new streak values
         current_streak, longest_streak = StreakService.calculate_streak(contact)
+        
+        # Ensure streak values are integers, not None
+        current_streak = current_streak or 0
+        longest_streak = longest_streak or 0
         
         print(f"DEBUG: After calculate_streak - current: {current_streak}, longest: {longest_streak}")
         

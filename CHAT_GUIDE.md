@@ -10,6 +10,7 @@ The chat feature uses Google's Gemini AI to help you maintain meaningful relatio
 - Suggesting follow-up questions
 - Helping you remember important details about your contacts
 - Offering relationship-building suggestions
+- Automatically detecting message language and responding in English or Spanish
 
 ## Getting Started
 
@@ -59,6 +60,15 @@ The AI provides insights about:
 - Conversation topics
 - Relationship strength indicators
 - Suggested contact frequency
+
+### Multilingual Support
+
+The AI automatically detects the language of your messages and responds accordingly:
+
+- **English**: Send messages in English to receive responses in English
+- **Spanish**: Send messages in Spanish (e.g., "Hablé con él hoy") to receive responses in Spanish
+- **Automatic Detection**: No need to manually set language preferences - the AI detects based on your message content
+- **Natural Switching**: You can switch between languages naturally in different conversations
 
 ## Best Practices
 

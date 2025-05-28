@@ -14,16 +14,31 @@ Lazor Connect is designed to help people build and maintain more meaningful rela
 - Stay connected with the people who matter
 - Track and improve your relationship habits
 
+## 📍 Project Status
+
+Lazor Connect is currently in **active development**. Core functionality is working, but many features are being refined and improved. The backend is undergoing significant refactoring to improve code quality, performance, and maintainability. See the [Technical Priorities](#-technical-priorities) section for current development focus.
+
 ## 🚀 Features
+
+### Core Functionality
 
 - **Meaningful Contact Management**: Create and maintain rich contact profiles focused on relationship building
 - **AI-Powered Conversation Guidance**: Get personalized suggestions for deeper, more meaningful conversations
 - **Relationship Insights**: Track interaction patterns and relationship strength
-- **Smart Reminders**: Get timely suggestions for meaningful check-ins
-- **Emotional Intelligence**: AI-powered assistance in understanding and responding to emotional needs
 - **Authentication**: Secure Supabase login system
 - **API Communication**: Secure interaction between mobile and backend
-- **Scalable Architecture**: Monorepo with clear separation of concerns
+
+### In Development
+
+- **Smart Reminders**: Get timely suggestions for meaningful check-ins _(needs refinement)_
+- **Emotional Intelligence**: AI-powered assistance in understanding and responding to emotional needs _(in progress)_
+- **Streak Tracking**: Gamified relationship maintenance _(functional, needs UI improvements)_
+- **Multilingual Support**: English and Spanish language detection _(functional, needs expansion)_
+
+### Architecture
+
+- **Scalable Design**: Monorepo with clear separation of concerns
+- **Modern Stack**: FastAPI backend with React Native (Expo) mobile app
 
 ## 🛠️ Technologies
 
@@ -72,12 +87,14 @@ The app uses Google's Gemini AI to provide:
 - **Relationship Building**: Tips for strengthening connections
 - **Contextual Memory**: Remembers important details about your relationships
 - **Personalized Suggestions**: Tailored recommendations based on relationship history
+- **Multilingual Support**: Automatic language detection with responses in English or Spanish
+- **Streak Tracking**: Gamified relationship maintenance with motivational messaging
 
 ## 🗄️ Database Structure
 
 The Supabase database schema includes:
 
-- **contacts**: Core contact information and relationship data
+- **contacts**: Core contact information, relationship data, and streak tracking (current_streak, longest_streak, last_streak_update)
 - **contact_methods**: Different ways to contact a person
 - **important_dates**: Significant dates related to contacts
 - **reminders**: Follow-up items for contacts
@@ -162,12 +179,38 @@ supabase_key = os.getenv("SUPABASE_KEY");
 
 ### Current Development Focus
 
-- **Relationship Streak Tracking**: Gamified approach to maintain regular contact with important people
+- **Backend Code Refactoring**: Improve code structure, error handling, and maintainability
+- **Prompt-to-Logic Migration**: Replace markdown instructions with programmatic logic where appropriate
+- **Enhanced Data Validation**: Strengthen input validation and type safety across all endpoints
+- **Service Layer Optimization**: Refactor services for better separation of concerns and testability
 - **Smart Contact Recommendations**: AI-powered suggestions for who to reach out to based on relationship patterns
 - **Interactive Reminder System**: Contextual reminders with conversation starters
-- **Emotion Analysis**: Better understanding of relationship dynamics through sentiment analysis
+- **Database Schema Optimization**: Improve database queries and add proper indexing
+- **API Response Standardization**: Consistent error handling and response formats
+- **Enhanced Multilingual Support**: Additional language support beyond English and Spanish
+- **Testing Infrastructure**: Comprehensive unit and integration testing setup
+- **Performance Optimization**: Backend performance improvements and caching strategies
 - **Offline Support**: Core functionality available without internet connection
-- **Cross-platform Enhancements**: Improved experience across various devices
+
+## 🔧 Technical Priorities
+
+### Backend Refactoring Goals
+
+- **Service Architecture**: Improve separation between business logic and data access layers
+- **Prompt Management**: Convert static markdown prompts to dynamic, configurable prompt builders
+- **Error Handling**: Implement comprehensive error handling with proper HTTP status codes
+- **Type Safety**: Enhance Pydantic models and add stricter validation
+- **Database Layer**: Optimize queries, add proper migrations, and implement connection pooling
+- **Configuration Management**: Centralize configuration and environment variable handling
+- **Logging & Monitoring**: Add structured logging and performance monitoring
+- **API Documentation**: Enhance OpenAPI documentation with examples and better descriptions
+
+### Code Quality Improvements
+
+- **Testing**: Add unit tests, integration tests, and API endpoint testing
+- **Code Standards**: Implement consistent coding standards and linting rules
+- **Documentation**: Improve inline documentation and add architectural decision records
+- **Performance**: Profile and optimize slow endpoints and database queries
 
 ## 🐛 Bugs & Feedback
 

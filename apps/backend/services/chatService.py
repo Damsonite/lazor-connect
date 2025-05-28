@@ -1,11 +1,11 @@
 from typing import Dict, Any
 import random
 import json
+import traceback
 from datetime import datetime, timezone
 
 from .contactService import ContactService 
 from .geminiClient import GeminiClient
-from utils.json import normalize_extracted_data
 
 # Import feedback_store for logging user feedback
 try:
@@ -19,6 +19,41 @@ class ChatService:
         self.contact_service = contact_service
         self.client = GeminiClient()
     
+    def _detect_language(self, user_message: str) -> str:
+        """
+        Detect the language of the user's message.
+        Returns 'en' for English, 'es' for Spanish.
+        """
+        if not user_message:
+            return 'en'  # Default to English
+            
+        # Simple language detection based on common words
+        spanish_indicators = [
+            'hablé', 'llamé', 'sí', 'qué', 'cómo', 'está', 'hoy', 'hablar', 'llamar',
+            'con', 'para', 'por', 'de', 'la', 'el', 'un', 'una', 'es', 'son',
+            'bueno', 'bien', 'mal', 'muy', 'más', 'menos', 'grande', 'pequeño'
+        ]
+        
+        english_indicators = [
+            'talked', 'spoke', 'called', 'texted', 'yes', 'yeah', 'how', 'what',
+            'today', 'with', 'about', 'good', 'bad', 'great', 'awesome', 'nice',
+            'the', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'have', 'has'
+        ]
+        
+        message_lower = user_message.lower()
+        
+        spanish_count = sum(1 for word in spanish_indicators if word in message_lower)
+        english_count = sum(1 for word in english_indicators if word in message_lower)
+        
+        # If we have clear indicators, use them
+        if spanish_count > english_count:
+            return 'es'
+        elif english_count > spanish_count:
+            return 'en'
+        
+        # Default to English if unclear
+        return 'en'
+
     async def _log_interaction(self, contact_id: str, user_message: str, bot_response: str):
         """
         Logs an interaction and updates streak automatically.
@@ -48,12 +83,16 @@ class ChatService:
     async def handle_message(self, contact_id: str, user_message: str) -> Dict[str, Any]:
         """
         Handles an incoming message from a user for a specific contact.
-        Focuses on motivating regular contact like Duolingo, rather than just collecting information.
+        Focuses on motivating regular contact, rather than just collecting information.
         """
         contact = self.contact_service.get_contact(contact_id)
         if not contact:
             return {"error": "Contact not found", "status_code": 404}
 
+        # Detect user language
+        user_language = self._detect_language(user_message)
+        print(f"Detected language for contact {contact_id}: {user_language}")
+        
         # Check if user is confirming they contacted someone
         contact_confirmation = await self._check_contact_confirmation(user_message)
         if contact_confirmation["is_confirmation"]:
@@ -69,11 +108,11 @@ class ChatService:
         
         # Generate appropriate response based on status
         if contact_status["message_type"] == "motivate":
-            bot_response_text = await self._generate_motivation_message(contact, contact_status)
+            bot_response_text = await self._generate_motivation_message(contact, contact_status, user_language)
         elif contact_status["message_type"] == "check":
-            bot_response_text = await self._generate_check_message(contact, contact_status)
+            bot_response_text = await self._generate_check_message(contact, contact_status, user_language)
         else:  # celebrate
-            bot_response_text = await self._generate_celebration_message(contact, contact_status)
+            bot_response_text = await self._generate_celebration_message(contact, contact_status, user_language)
 
         # Extract any potential profile data from the message
         extracted_data = {}
@@ -107,6 +146,13 @@ class ChatService:
         current_date = datetime.now(timezone.utc)
         last_connection = contact.get("last_connection")
         recommended_freq = contact.get("recommended_contact_freq_days") or 7  # Default to 7 days if None
+
+        # Ensure recommended_freq is an integer
+        if not isinstance(recommended_freq, int):
+            print(f"Invalid recommended_contact_freq_days for contact {contact.get('id')}: {recommended_freq}. Defaulting to 7.")
+            recommended_freq = 7
+            
+        print(f"Contact ID: {contact.get('id')}, Last Connection: {last_connection}, Recommended Frequency: {recommended_freq}")
         
         if not last_connection:
             return {
@@ -200,24 +246,38 @@ class ChatService:
         if not updated_contact:
             return {"error": "Contact not found", "status_code": 404}
         
-        # Generate celebration response
-        current_streak = updated_contact.get("current_streak", 0)
-        longest_streak = updated_contact.get("longest_streak", 0)
+        # Ensure streak values are not None
+        current_streak = updated_contact.get("current_streak", 0) or 0
+        longest_streak = updated_contact.get("longest_streak", 0) or 0
         
-        celebration_messages = [
-            f"¡Fantástico! Tu racha con {updated_contact.get('name')} ahora es de {current_streak} días. ¡Sigue así!",
-            f"¡Excelente! Has mantenido el contacto {current_streak} días seguidos. ¡Qué buena conexión!",
-            f"¡Increíble! Tu racha es de {current_streak} días. Realmente valoras esta relación."
-        ]
+        # Detect user's language
+        language = self._detect_language(user_message)
         
-        if current_streak == longest_streak and current_streak > 1:
-            celebration_messages.append(f"¡Nuevo récord! {current_streak} días es tu racha más larga con {updated_contact.get('name')}!")
-        
-        import random
-        bot_response = random.choice(celebration_messages)
-        
-        # Ask about the interaction
-        bot_response += " ¿De qué hablaron? Me ayudará a sugerir temas para la próxima vez."
+        # Generate celebration response in the user's language
+        if language == 'es':
+            celebration_messages = [
+                f"¡Fantástico! Tu racha con {updated_contact.get('name')} ahora es de {current_streak} días. ¡Sigue así!",
+                f"¡Excelente! Has mantenido el contacto {current_streak} días seguidos. ¡Qué buena conexión!",
+                f"¡Increíble! Tu racha es de {current_streak} días. Realmente valoras esta relación."
+            ]
+            
+            if current_streak == longest_streak and current_streak > 1:
+                celebration_messages.append(f"¡Nuevo récord! {current_streak} días es tu racha más larga con {updated_contact.get('name')}!")
+            
+            bot_response = random.choice(celebration_messages)
+            bot_response += " ¿De qué hablaron? Me ayudará a sugerir temas para la próxima vez."
+        else:
+            celebration_messages = [
+                f"Fantastic! Your streak with {updated_contact.get('name')} is now {current_streak} days. Keep it up!",
+                f"Excellent! You've maintained contact for {current_streak} consecutive days. Great connection!",
+                f"Amazing! Your streak is {current_streak} days. You really value this relationship."
+            ]
+            
+            if current_streak == longest_streak and current_streak > 1:
+                celebration_messages.append(f"New record! {current_streak} days is your longest streak with {updated_contact.get('name')}!")
+            
+            bot_response = random.choice(celebration_messages)
+            bot_response += " What did you talk about? It will help me suggest topics for next time."
         
         # Extract information from the user's description
         extracted_data = {}
@@ -241,71 +301,91 @@ class ChatService:
             "profile_suggestions": extracted_data
         }
 
-    async def _generate_motivation_message(self, contact: Dict, status: Dict) -> str:
+    async def _generate_motivation_message(self, contact: Dict, status: Dict, language: str = 'en') -> str:
         """
         Generate a motivational message to encourage contacting someone.
         """
-        name = contact.get('name', 'esta persona')
+        name = contact.get('name', 'esta persona' if language == 'es' else 'this person')
         days_since = status["days_since_contact"]
         
         if self.client.is_available():
             try:
-                # Use Gemini to generate personalized conversation starters
-                duolingo_prompt = self._build_duolingo_prompt(contact, status, "motivate")
-                return await self.client.generate_content(duolingo_prompt)
+                # Use AI to generate personalized conversation starters
+                motivation_prompt = self._build_motivation_prompt(contact, status, "motivate", language)
+                return await self.client.generate_content(motivation_prompt)
             except Exception as e:
                 print(f"Error generating motivation message: {e}")
         
         # Fallback messages
-        if days_since >= 14:
-            return f"¡Han pasado {days_since} días desde que contactaste a {name}! Es momento de reconectarse. ¿Qué tal si les preguntas cómo están?"
-        elif days_since >= 7:
-            return f"Han pasado {days_since} días desde tu última conexión con {name}. ¿Has hablado con ellos hoy?"
+        if language == 'es':
+            if days_since >= 14:
+                return f"¡Han pasado {days_since} días desde que contactaste a {name}! Es momento de reconectarse. ¿Qué tal si les preguntas cómo están?"
+            elif days_since >= 7:
+                return f"Han pasado {days_since} días desde tu última conexión con {name}. ¿Has hablado con ellos hoy?"
+            else:
+                return f"¿Ya contactaste a {name} hoy? ¡Mantén esa racha activa!"
         else:
-            return f"¿Ya contactaste a {name} hoy? ¡Mantén esa racha activa!"
+            if days_since >= 14:
+                return f"It's been {days_since} days since you contacted {name}! Time to reconnect. How about asking how they're doing?"
+            elif days_since >= 7:
+                return f"It's been {days_since} days since your last connection with {name}. Have you talked to them today?"
+            else:
+                return f"Have you contacted {name} today? Keep that streak alive!"
 
-    async def _generate_check_message(self, contact: Dict, status: Dict) -> str:
+    async def _generate_check_message(self, contact: Dict, status: Dict, language: str = 'en') -> str:
         """
         Generate a message to check if user has contacted someone recently.
         """
-        name = contact.get('name', 'esta persona')
+        name = contact.get('name', 'esta persona' if language == 'es' else 'this person')
         
         if self.client.is_available():
             try:
-                duolingo_prompt = self._build_duolingo_prompt(contact, status, "check")
-                return await self.client.generate_content(duolingo_prompt)
+                motivation_prompt = self._build_motivation_prompt(contact, status, "check", language)
+                return await self.client.generate_content(motivation_prompt)
             except Exception as e:
                 print(f"Error generating check message: {e}")
         
-        return f"¿Has hablado con {name} hoy? Si no, ¡es un buen momento para contactarlos!"
+        if language == 'es':
+            return f"¿Has hablado con {name} hoy? Si no, ¡es un buen momento para contactarlos!"
+        else:
+            return f"Have you talked to {name} today? If not, it's a good time to reach out!"
 
-    async def _generate_celebration_message(self, contact: Dict, status: Dict) -> str:
+    async def _generate_celebration_message(self, contact: Dict, status: Dict, language: str = 'en') -> str:
         """
         Generate a celebration message for recent contact.
         """
-        name = contact.get('name', 'esta persona')
+        name = contact.get('name', 'esta persona' if language == 'es' else 'this person')
         current_streak = contact.get('current_streak', 0)
         
         if self.client.is_available():
             try:
-                duolingo_prompt = self._build_duolingo_prompt(contact, status, "celebrate")
-                return await self.client.generate_content(duolingo_prompt)
+                motivation_prompt = self._build_motivation_prompt(contact, status, "celebrate", language)
+                return await self.client.generate_content(motivation_prompt)
             except Exception as e:
                 print(f"Error generating celebration message: {e}")
         
-        return f"¡Excelente! Ya contactaste a {name} hoy. Tu racha actual es de {current_streak} días. ¿Cómo estuvo la conversación?"
+        if language == 'es':
+            return f"¡Excelente! Ya contactaste a {name} hoy. Tu racha actual es de {current_streak} días. ¿Cómo estuvo la conversación?"
+        else:
+            return f"Excellent! You already contacted {name} today. Your current streak is {current_streak} days. How was the conversation?"
 
-    def _build_duolingo_prompt(self, contact: Dict, status: Dict, message_type: str) -> str:
+    def _build_motivation_prompt(self, contact: Dict, status: Dict, message_type: str, language: str = 'en') -> str:
         """
-        Build a prompt for Duolingo-style messaging.
+        Build a prompt for motivation-style messaging.
         """
-        # Load Duolingo mode instructions
-        duolingo_instructions = self.client._load_prompt_if_exists("duolingo_mode_instructions")
+        # Load motivation mode instructions
+        motivation_instructions = self.client._load_prompt_if_exists("motivation_mode_instructions")
         
-        prompt_parts = [duolingo_instructions or "You are a relationship motivation assistant like Duolingo for connections."]
+        prompt_parts = [motivation_instructions or "You are a relationship motivation assistant that helps people maintain meaningful connections."]
+        
+        # Add language instruction
+        if language == 'es':
+            prompt_parts.append("Respond in Spanish.")
+        else:
+            prompt_parts.append("Respond in English.")
         
         # Add contact context
-        name = contact.get('name', 'esta persona')
+        name = contact.get('name', 'esta persona' if language == 'es' else 'this person')
         prompt_parts.append(f"Contact: {name}")
         
         if contact.get('interests'):
@@ -403,7 +483,7 @@ class ChatService:
 
     async def get_initial_greeting(self, contact_id: str) -> Dict[str, Any]:
         """
-        Provides an initial greeting focused on motivating contact like Duolingo.
+        Provides an initial greeting focused on motivating contact and relationship maintenance.
         """
         try:
             print(f"Getting greeting for contact: {contact_id}")
@@ -418,22 +498,22 @@ class ChatService:
             contact_status = self._get_contact_status(contact)
             print(f"Contact status: {contact_status}")
             
-            # Generate appropriate greeting based on status
+            # Generate appropriate greeting based on status (default to English for initial greeting)
             print(f"Generating {contact_status['message_type']} message...")
             try:
                 if contact_status["message_type"] == "motivate":
-                    greeting_text = await self._generate_motivation_message(contact, contact_status)
+                    greeting_text = await self._generate_motivation_message(contact, contact_status, 'en')
                 elif contact_status["message_type"] == "check":
-                    greeting_text = await self._generate_check_message(contact, contact_status)
+                    greeting_text = await self._generate_check_message(contact, contact_status, 'en')
                 else:  # celebrate
-                    greeting_text = await self._generate_celebration_message(contact, contact_status)
+                    greeting_text = await self._generate_celebration_message(contact, contact_status, 'en')
                 print(f"Generated greeting: {greeting_text[:50]}...")
             except Exception as e:
                 print(f"Error generating greeting message: {e}")
                 import traceback
                 traceback.print_exc()
-                name = contact.get('name', 'esta persona')
-                greeting_text = f"¡Hola! Te ayudo a mantener el contacto con {name}."
+                name = contact.get('name', 'this person')
+                greeting_text = f"Hi! I'll help you stay in touch with {name}."
             
             return {
                 "contact_id": contact_id,
