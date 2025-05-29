@@ -18,14 +18,22 @@ export function useChat(contactId: string) {
 
   // Initialize chat
   useEffect(() => {
-    if (!contactId) return;
+    console.log('🚀 useChat hook initializing with contactId:', contactId);
+    if (!contactId) {
+      console.warn('⚠️ No contactId provided to useChat hook');
+      return;
+    }
 
     // Load contact and greeting
     const initializeChat = async () => {
+      console.log('🔄 Starting chat initialization...');
       try {
         // Get contact data
+        console.log('📞 Calling getContactById...');
         const contactData = await getContactById(contactId);
-        console.log(`Contact with id ${contactId} fetched:`, JSON.stringify(contactData));
+        console.log(`🎯 Contact data received in useChat for ID: ${contactData.id}`);
+
+        console.log('💾 Setting contact data in state...');
         setContact(contactData);
 
         // Get initial greeting

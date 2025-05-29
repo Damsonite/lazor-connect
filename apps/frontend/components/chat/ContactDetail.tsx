@@ -24,6 +24,9 @@ export default function ContactDetailField({
   const { colorScheme } = useColorScheme();
   const mode = colorScheme ?? 'light';
 
+  // Debug logging
+  console.log(`📝 ContactDetail '${label}': ${value ? 'has value' : 'no value'}`);
+
   const renderValue = () => {
     let text = '';
 

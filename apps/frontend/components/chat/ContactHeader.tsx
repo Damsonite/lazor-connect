@@ -14,6 +14,9 @@ export default function ContactHeader({ contact }: { contact: Contact }) {
   const { colorScheme } = useColorScheme();
   const mode = colorScheme ?? 'light';
 
+  // Debug logging
+  console.log('🎭 ContactHeader received contact ID:', contact?.id);
+
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
       setDimensions(window);

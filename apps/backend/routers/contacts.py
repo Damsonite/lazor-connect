@@ -7,6 +7,7 @@ from typing import List, Optional, Dict
 from models import ContactCreate, ContactUpdate
 from services.contactService import ContactService
 from services.streakService import StreakService
+from services.mockContactService import mock_contact_service
 
 router = APIRouter(
     prefix="/contacts",
@@ -42,6 +43,72 @@ def list_contacts(
         relationship_strength=relationship_strength,
         min_strength=min_strength
     )
+
+
+# Mock endpoints for when database is unavailable (must be defined before parameterized routes)
+@router.get("/mock", response_model=List[dict])
+def list_mock_contacts(
+    search: Optional[str] = None,
+    relationship_type: Optional[str] = None,
+    relationship_strength: Optional[int] = Query(None, ge=1, le=5),
+    min_strength: Optional[int] = Query(None, ge=1, le=5)
+):
+    """
+    List mock contacts (fallback when database is unavailable)
+    
+    - **search**: Search string to filter contacts (searches in name field)
+    - **relationship_type**: Filter by relationship type (friend, family, colleague, etc.)
+    - **relationship_strength**: Filter by exact relationship strength (1-5 scale)
+    - **min_strength**: Filter for contacts with at least this relationship strength
+    """
+    return mock_contact_service.list_contacts(
+        search=search,
+        relationship_type=relationship_type,
+        relationship_strength=relationship_strength,
+        min_strength=min_strength
+    )
+
+
+@router.post("/mock", response_model=dict)
+def create_mock_contact(contact: ContactCreate):
+    """Create a new mock contact (fallback when database is unavailable)"""
+    return mock_contact_service.create_contact(contact.model_dump(mode="json"))
+
+
+@router.post("/mock/reset")
+def reset_mock_data():
+    """Reset mock data to original state"""
+    mock_contact_service.reset_mock_data()
+    return {"message": "Mock data reset successfully"}
+
+
+@router.get("/mock/{contact_id}", response_model=dict)
+def get_mock_contact(contact_id: str):
+    """Get a mock contact by ID (fallback when database is unavailable)"""
+    contact = mock_contact_service.get_contact(contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Mock contact not found")
+    return contact
+
+
+@router.put("/mock/{contact_id}", response_model=dict)
+def update_mock_contact(contact_id: str, contact: ContactUpdate):
+    """Update a mock contact (fallback when database is unavailable)"""
+    updated_contact = mock_contact_service.update_contact(
+        contact_id, 
+        contact.model_dump(mode="json", exclude_unset=True)
+    )
+    if not updated_contact:
+        raise HTTPException(status_code=404, detail="Mock contact not found")
+    return updated_contact
+
+
+@router.delete("/mock/{contact_id}")
+def delete_mock_contact(contact_id: str):
+    """Delete a mock contact (fallback when database is unavailable)"""
+    if not mock_contact_service.delete_contact(contact_id):
+        raise HTTPException(status_code=404, detail="Mock contact not found")
+    return {"message": "Mock contact deleted successfully"}
 
 
 @router.get("/search/{query}", response_model=List[dict])

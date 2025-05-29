@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { MockChatService } from './mockChatService';
+
 import { ChatResponse, GreetingResponse, Message } from '~/types/chat';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -8,6 +10,23 @@ const api = axios.create({
   baseURL: API_URL,
   timeout: 30000, // Increase timeout to 30 seconds
 });
+
+// Helper function to check if we should use mock service
+const shouldUseMockService = (error: any): boolean => {
+  // Use mock service if:
+  // 1. Network error (no internet, server down)
+  // 2. Timeout error
+  // 3. 5xx server errors (but not 4xx client errors)
+  if (axios.isAxiosError(error)) {
+    return (
+      !error.response || // Network error
+      error.code === 'ECONNABORTED' || // Timeout
+      error.code === 'NETWORK_ERROR' ||
+      error.response.status >= 500 // Server error
+    );
+  }
+  return false;
+};
 
 export const sendChatMessage = async (
   contactId: string,
@@ -43,6 +62,13 @@ export const sendChatMessage = async (
     } else {
       console.error(`Error sending message for contact ${contactId}:`, error);
     }
+
+    // Check if we should fallback to mock service
+    if (shouldUseMockService(error)) {
+      console.warn('⚠️ Chat API unavailable, falling back to mock chat service');
+      return await MockChatService.sendChatMessage(contactId, message);
+    }
+
     throw error;
   }
 };
@@ -54,6 +80,13 @@ export const getInitialGreeting = async (contactId: string): Promise<GreetingRes
     return response.data;
   } catch (error) {
     console.error(`Error getting greeting for contact ${contactId}:`, error);
+
+    // Check if we should fallback to mock service
+    if (shouldUseMockService(error)) {
+      console.warn('⚠️ Chat API unavailable, falling back to mock chat service');
+      return await MockChatService.getInitialGreeting(contactId);
+    }
+
     throw error;
   }
 };
