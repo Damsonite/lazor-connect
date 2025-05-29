@@ -1,6 +1,6 @@
 {
   "cesVersion": "2.18.0",
-  "projectName": "mobile",
+  "projectName": "frontend",
   "packages": [
     {
       "name": "expo-router",

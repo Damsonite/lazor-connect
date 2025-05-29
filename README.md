@@ -1,6 +1,6 @@
 # Lazor Connect
 
-![Lazor Connect Logo](apps/mobile/assets/adaptive-icon.png)
+![Lazor Connect Logo](apps/frontend/assets/adaptive-icon.png)
 
 > A full-stack application combining a FastAPI backend with a React Native (Expo) mobile app. Its goal is to promote meaningful human connections through AI-powered conversation guidance, relationship tracking, and personalized interaction suggestions.
 
@@ -127,7 +127,7 @@ Docs at [http://localhost:8000/docs](http://localhost:8000/docs)
 ### 📱 Mobile App
 
 ```bash
-cd apps/mobile
+cd apps/frontend
 pnpm install
 pnpm start  # starts development server
 pnpm android  # run on Android
@@ -138,7 +138,7 @@ pnpm web      # run on Web
 ### 🔐 Environment Variables
 
 ```bash
-# apps/mobile/.env
+# apps/frontend/.env
 EXPO_PUBLIC_API_URL=http://192.168.x.x:8000
 ```
 

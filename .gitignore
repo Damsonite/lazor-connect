@@ -9,22 +9,22 @@ venv/
 __pycache__/
 
 # Expo specific ignores
-apps/mobile/node_modules/
-apps/mobile/.expo/
-apps/mobile/dist/
-apps/mobile/npm-debug.*
-apps/mobile/*.jks
-apps/mobile/*.p8
-apps/mobile/*.p12
-apps/mobile/*.key
-apps/mobile/*.mobileprovision
-apps/mobile/*.orig.*
-apps/mobile/web-build/
-apps/mobile/expo-env.d.ts
+apps/frontend/node_modules/
+apps/frontend/.expo/
+apps/frontend/dist/
+apps/frontend/npm-debug.*
+apps/frontend/*.jks
+apps/frontend/*.p8
+apps/frontend/*.p12
+apps/frontend/*.key
+apps/frontend/*.mobileprovision
+apps/frontend/*.orig.*
+apps/frontend/web-build/
+apps/frontend/expo-env.d.ts
 
 # Mobile app build folders
-apps/mobile/ios
-apps/mobile/android
+apps/frontend/ios
+apps/frontend/android
 
 # Temporary files created by Metro
-apps/mobile/.metro-health-check*
+apps/frontend/.metro-health-check*
