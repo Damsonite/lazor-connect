@@ -2,14 +2,52 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+# Install pnpm and curl for health checks
+RUN apk add --no-cache curl && \
+    npm install -g pnpm@latest
 
-COPY frontend/package.json frontend/pnpm-lock.yaml* ./
+# Copy package files first for better layer caching
+COPY apps/frontend/package.json ./
+# Copy pnpm-lock.yaml if it exists, otherwise skip
+COPY apps/frontend/pnpm-lock.yaml* ./
 
-RUN pnpm install
+# Clear npm cache and install dependencies
+RUN npm cache clean --force && \
+    pnpm install --frozen-lockfile --prefer-offline
 
-COPY frontend/ .
+# Copy source files in a specific order for better caching
+COPY apps/frontend/app ./app
+COPY apps/frontend/components ./components
+COPY apps/frontend/context ./context
+COPY apps/frontend/hooks ./hooks
+COPY apps/frontend/services ./services
+COPY apps/frontend/store ./store
+COPY apps/frontend/types ./types
+COPY apps/frontend/utils ./utils
+COPY apps/frontend/assets ./assets
+
+# Copy configuration files
+COPY apps/frontend/*.config.* ./
+COPY apps/frontend/tsconfig.json ./
+COPY apps/frontend/global.css ./
+
+# Copy environment files if they exist
+COPY apps/frontend/.env* ./
 
 EXPOSE 8081
 
-CMD ["pnpm", "web", "--host", "0.0.0.0"]
+# Set environment variables for consistent builds
+ENV NODE_ENV=production
+ENV EXPO_USE_METRO_WORKSPACE_ROOT=1
+
+# Build for web production with error handling
+RUN pnpm build:web || (echo "Build failed" && exit 1)
+
+# Install serve to serve the built app
+RUN npm install -g serve@latest
+
+# Health check to ensure the app is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8081 || exit 1
+
+CMD ["serve", "-s", "dist", "-l", "8081", "--single"]

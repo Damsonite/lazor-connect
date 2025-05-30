@@ -1,5 +1,35 @@
 # Lazor Connect
 
+## Telemática - Proyecto Final
+
+**Nota**: Esta es una branch específica de un proyecto personal que incluye la configuración completa de Docker y Terraforma para desarrollo y producción.
+
+### Resumen del Trabajo Realizado
+
+Este proyecto consiste en una aplicación full-stack con:
+
+- **Backend**: FastAPI (Python) en puerto 8000
+- **Frontend**: React Native/Expo compilado para web en puerto 8081
+- **Base de datos**: Configuración para Supabase
+
+### Ejecutar con Docker
+
+```bash
+# Clonar el repositorio y navegar al directorio
+cd lazor-connect
+
+# Construir y ejecutar todos los contenedores
+sudo docker compose up -d
+
+# Verificar que los servicios estén corriendo
+sudo docker compose ps
+```
+
+### Acceder a la Aplicación
+
+- **Frontend (Web)**: http://localhost:8081
+- **Backend API**: http://localhost:8000
+
 ![Lazor Connect Logo](apps/frontend/assets/adaptive-icon.png)
 
 > A full-stack application combining a FastAPI backend with a React Native (Expo) mobile app. Its goal is to promote meaningful human connections through AI-powered conversation guidance, relationship tracking, and personalized interaction suggestions.
