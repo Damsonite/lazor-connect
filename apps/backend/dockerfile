@@ -8,12 +8,12 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+COPY apps/backend/requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
+COPY apps/backend/. .
 
 RUN chown -R appuser:appuser /app
 
