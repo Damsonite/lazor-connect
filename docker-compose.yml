@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/dockerfile
+    container_name: lazor-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - lazor-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/dockerfile
+    container_name: lazor-frontend
+    ports:
+      - "8081:8081"
+    environment:
+      - EXPO_USE_METRO_WORKSPACE_ROOT=1
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - lazor-network
+    restart: unless-stopped
+
+networks:
+  lazor-network:
+    driver: bridge
+    name: lazor-connect-network

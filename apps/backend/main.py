@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import contacts, health, chat, feedback  # Import feedback router
+from routers import contacts, health, chat, feedback
 import sys
 sys.path.append("/home/morita/Dev/lazor-connect/apps/backend/routers")
 
@@ -25,4 +25,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(contacts.router)
 app.include_router(chat.router)
-app.include_router(feedback.router)  # Register feedback router
+app.include_router(feedback.router)
