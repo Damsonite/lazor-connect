@@ -2,7 +2,7 @@
 
 ## Telemática - Proyecto Final
 
-**Nota**: Esta es una branch específica de un proyecto personal que incluye la configuración completa de Docker y Terraforma para desarrollo y producción.
+**Nota**: Esta es una branch específica de un proyecto personal que incluye la configuración completa de Docker y Terraform para desarrollo y producción.
 
 ### Resumen del Trabajo Realizado
 
